@@ -38,7 +38,9 @@ export function makeSandbox() {
   fs.mkdirSync(path.dirname(bare), { recursive: true });
   sh(base, 'git', 'init', '-q', '--bare', '-b', 'main', bare);
   g('remote', 'set-url', 'origin', bare.replace(/\\/g, '/'));
+  g('config', 'remote.origin.fetch', '+refs/heads/*:refs/remotes/origin/*'); // clone was single-branch
   g('push', '-q', '-u', 'origin', 'main');
+  g('fetch', '-q', '--prune', 'origin');
   g('remote', 'set-head', 'origin', 'main');
   return { base, bare, work, g, tryG: (...a) => tryGit(work, ...a), rg: (...a) => tryGit(base, '--git-dir', bare, ...a) };
 }

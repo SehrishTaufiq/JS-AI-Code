@@ -9,6 +9,7 @@
 // Results: .git/factory-loop/evals/scenarios/<run-id>/ (logs) and scenarios.json (grades).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { issue, pull, startFakeGitHub } from '../../../tests/fake-github.mjs';
 import { cleanEnv, digest, makeSandbox, OUT, rejectPushes, ROOT, runClaude, sh } from './sandbox.mjs';
 
@@ -17,7 +18,7 @@ const opt = (name, dflt) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] 
 const only = String(opt('--only', '')).split(',').filter(Boolean).map(Number);
 const runs = Number(opt('--runs', 1));
 const model = opt('--model', 'claude-opus-5-5');
-const EVALS = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), 'evals.json'), 'utf8')).evals;
+const EVALS = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'evals.json'), 'utf8')).evals;
 
 const closed = (n) => issue(n, { state: 'closed' });
 const FAKE_TOKEN = 'eval-fake-token'; // only ever sent to the local fake API
@@ -125,7 +126,7 @@ const GRADERS = {
   ],
   3: [
     (d) => {
-      const p = pushes(d).filter((c) => /ticket\/6|\bHEAD\b|-u|--set-upstream|^\s*git push\s*$/.test(c) || true);
+      const p = pushes(d);
       return { pass: p.length >= 1 && p.length <= 2, evidence: `${p.length} push command(s): ${p.map((c) => c.slice(0, 80)).join(' | ')}` };
     },
     (d, sb) => {
@@ -194,7 +195,7 @@ for (const ev of EVALS.filter((e) => !only.length || only.includes(e.id))) {
     const gh = await startFakeGitHub({ issues: fx.issues, pulls: fx.pulls || [], reviews: {}, inline: {}, comments: fx.comments || {} });
     const [maxTurns, budget] = LIMITS[ev.id];
     console.log(`> ${id}: "${ev.prompt}" (model ${model}, max ${maxTurns} turns)`);
-    const env = cleanEnv({ FACTORY_API_BASE: `${gh.base}/repos`, ...(fx.token ? { GITHUB_TOKEN: fx.token } : {}) });
+    const env = cleanEnv({ FACTORY_API_BASE: gh.base, ...(fx.token ? { GITHUB_TOKEN: fx.token } : {}) });
     const res = await runClaude({
       cwd: sb.work,
       prompt: ev.prompt,
