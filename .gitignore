@@ -19,3 +19,7 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Claude Code session state / prompt log (published to the prompt-log branch by the Stop hook)
+.claude/scheduled_tasks.lock
+.claude/logs/

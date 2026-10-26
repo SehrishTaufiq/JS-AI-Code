@@ -57,10 +57,15 @@ async function prCreate() {
   if (pr) console.log(`opened PR #${pr.number}: ${pr.html_url}`);
 }
 
+// Comments on an issue or a PR (PRs are issues for comments). A draft named comment-<N>.md is
+// renamed to comment-<N>.posted.md once posted, so fetch-tickets knows not to retry it.
 async function comment() {
   const issue = need('--issue');
+  const file = need('--body-file');
   const c = await write('POST', `/repos/${slug}/issues/${issue}/comments`, { body: bodyFrom('--body-file') });
-  if (c) console.log(`commented: ${c.html_url}`);
+  if (!c) return;
+  console.log(`commented: ${c.html_url}`);
+  if (/comment-\d+\.md$/.test(file)) fs.renameSync(file, file.replace(/\.md$/, '.posted.md'));
 }
 
 // Human feedback on a PR, oldest first: reviews, inline review comments and conversation
@@ -87,6 +92,10 @@ function imageMd() {
   const dir = need('--dir');
   const ref = arg(args, '--ref') || git('rev-parse', 'HEAD');
   const root = git('rev-parse', '--show-toplevel');
+  if (!fs.existsSync(dir)) {
+    console.error(`no screenshot folder at ${dir}; take the screenshots first (references/browser-qa.md)`);
+    process.exit(2);
+  }
   const files = fs.readdirSync(dir).filter((f) => /\.(png|jpe?g|webp)$/i.test(f)).sort();
   for (const f of files) {
     const rel = path.relative(root, path.resolve(dir, f)).split(path.sep).join('/');

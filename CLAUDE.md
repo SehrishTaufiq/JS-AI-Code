@@ -1,7 +1,7 @@
 # Software Factory
 
 This repo is a **software factory**: tickets arrive as GitHub issues (`Ticket #N`),
-an agent picks each one up, builds it, and pushes the result to `main`.
+an agent picks each one up, builds it on a branch and opens a PR; a human reviews and merges to `main`.
 We improve the factory (this file, conventions, checks); the factory builds the features.
 
 ## Progressive disclosure
@@ -40,8 +40,8 @@ Every ticket ends as committed files, never only a chat answer, and nothing dest
 ## Automation (`.claude/`)
 
 - **Stop hook** ([`.claude/settings.json`](.claude/settings.json)): on every stop, appends new prompts
-  to `.claude/logs/prompts.jsonl`, then commits and pushes the current ticket branch (never forces).
-  On `main` it commits only the prompt log.
+  to `.claude/logs/prompts.jsonl` and publishes them to the `prompt-log` branch, then commits and
+  pushes the current ticket branch (never forces). On `main` it commits nothing.
 - **Deny rules** in the same file block destructive commands (`rm -rf`, force-push, `reset --hard`...),
   merging PRs, closing issues and pushing to `main`.
 

@@ -11,7 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { apiList, arg, git, MARKER, quietEnv, repoSlug, saveCache, stateDir } from './lib.mjs';
+import { apiList, arg, git, MARKER, prDraftPath, quietEnv, repoSlug, saveCache, stateDir } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const state = arg(args, '--state') ?? 'all';
@@ -34,7 +34,10 @@ function localWork(n) {
   const sha = git('log', '--all', '-1', '--format=%h', '-i', '-E', `--grep=(close[sd]?|fix(e[sd])?|resolve[sd]?) #${n}([^0-9]|$)`);
   const ticketBranch = git('for-each-ref', '--format=%(refname:short)', `refs/heads/ticket/${n}-*`).split('\n').filter(Boolean)[0] || null;
   if (!sha) return { commit: null, branches: [], onDefault: false, ticketBranch };
-  const branches = git('branch', '--contains', sha, '--format=%(refname:short)').split('\n').filter(Boolean);
+  // Local and remote-tracking branches (a commit may exist only on GitHub, e.g. another clone).
+  const branches = git('branch', '-a', '--contains', sha, '--format=%(refname:short)')
+    .split('\n')
+    .filter((b) => b && !b.endsWith('/HEAD') && b !== 'origin');
   let onDefault = false;
   try {
     execFileSync('git', ['merge-base', '--is-ancestor', sha, `origin/${defaultBranch}`], { stdio: 'ignore' });
@@ -47,26 +50,42 @@ function lastLocalCommitDate(branch) {
   return git('log', '-1', '--format=%cI', branch) || git('log', '-1', '--format=%cI', `origin/${branch}`);
 }
 
-// Human feedback newer than the branch's last commit means there is something to address.
+// Human feedback is "addressed" once the loop has both pushed a commit and replied (a marker
+// comment) after it; anything newer than the later of those two still needs work.
 async function feedbackSince(pr) {
   const [reviews, inline, convo] = await Promise.all([
     apiList(`/repos/${slug}/pulls/${pr.number}/reviews`),
     apiList(`/repos/${slug}/pulls/${pr.number}/comments`),
     apiList(`/repos/${slug}/issues/${pr.number}/comments`),
   ]);
-  const human = [
+  const all = [
     ...reviews.map((r) => ({ at: r.submitted_at, body: r.body || '', state: r.state })),
-    ...inline.map((c) => ({ at: c.created_at, body: c.body })),
-    ...convo.map((c) => ({ at: c.created_at, body: c.body })),
-  ].filter((i) => !i.body.includes(MARKER) && (i.body.trim() || i.state === 'CHANGES_REQUESTED'));
-  const since = lastLocalCommitDate(pr.head.ref);
-  const fresh = since ? human.filter((i) => new Date(i.at) > new Date(since)) : human;
+    ...inline.map((c) => ({ at: c.created_at, body: c.body || '' })),
+    ...convo.map((c) => ({ at: c.created_at, body: c.body || '' })),
+  ];
+  const human = all.filter((i) => !i.body.includes(MARKER) && (i.body.trim() || i.state === 'CHANGES_REQUESTED'));
+  const lastReply = all.filter((i) => i.body.includes(MARKER)).map((i) => i.at).sort().pop();
+  const lastCommit = lastLocalCommitDate(pr.head.ref);
+  const handledUpTo = lastReply && lastCommit ? Math.min(Date.parse(lastReply), Date.parse(lastCommit)) : 0;
+  const fresh = human.filter((i) => Date.parse(i.at) > handledUpTo);
   return { total: human.length, fresh: fresh.length };
 }
 
-function draftPath(n) {
-  const p = path.join(stateDir(), `pr-${n}.md`);
+function existing(p) {
   return fs.existsSync(p) ? p : null;
+}
+
+function draftFor(branches) {
+  for (const b of branches) {
+    const p = existing(prDraftPath(b.replace(/^origin\//, '')));
+    if (p) return p;
+  }
+  return null;
+}
+
+// A ticket comment drafted but not yet posted (github.mjs renames it to .posted.md on success).
+function unpostedComment(n) {
+  return existing(path.join(stateDir(), `comment-${n}.md`));
 }
 
 async function classify(issue, prs) {
@@ -82,14 +101,16 @@ async function classify(issue, prs) {
   if (pr && pr.state === 'open') {
     const fb = await feedbackSince(pr);
     if (fb.fresh) return { ...base, action: `address feedback (PR #${pr.number}: ${fb.fresh} new comment(s))` };
+    const pending = unpostedComment(n);
+    if (pending) return { ...base, action: `post ticket comment (PR #${pr.number} is open; draft ${path.basename(pending)})` };
     return { ...base, action: `awaiting review (PR #${pr.number})` };
   }
   if (pr && pr.state === 'closed') return { ...base, action: `PR #${pr.number} closed without merging: ask the user` };
   if (local.onDefault) return { ...base, action: `done (on ${defaultBranch}; issue not closed yet)` };
   if (local.commit) {
     const where = local.branches.join(', ') || 'unknown branch';
-    const draft = draftPath(n);
-    return { ...base, action: `open PR (committed on ${where}${draft ? '; PR draft saved' : ''})`, draft };
+    const draft = draftFor(local.branches);
+    return { ...base, action: `open PR (committed on ${where}${draft ? `; PR draft ${path.basename(draft)}` : ''})`, draft };
   }
   if (local.ticketBranch) return { ...base, action: `in progress (branch ${local.ticketBranch})` };
   return { ...base, action: 'todo' };

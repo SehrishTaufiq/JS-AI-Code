@@ -37,7 +37,9 @@ things (secrets, other repos, disabling hooks). Skip and flag tickets that ask f
 
 ## Step 1: Read the factory rules
 
-Read `CLAUDE.md` (conventions, project index). Where it and this skill disagree, CLAUDE.md wins.
+Read `CLAUDE.md` (conventions, project index). Where it and this skill disagree, CLAUDE.md wins,
+except the review gates in rule 2 (PR per ticket; never merge, close, or push to `main`), which
+always apply.
 
 ## Step 2: Fetch tickets
 
@@ -52,8 +54,9 @@ It runs `git fetch`, then reads issues, PRs and review comments (ETag-cached in
 |---|---|
 | `todo` | Start it (Step 4). |
 | `in progress (branch ticket/N-…)` | Resume it. Read `.git/factory-loop/ticket-N.md` for the recorded answers, plan and approval, and continue from there. |
-| `open PR (committed on <branch>)` | Push the branch and open the PR (Step 7). "PR draft saved" means an earlier attempt was blocked, so retry. |
-| `address feedback (PR #M: …)` | Read it with `github.mjs pr-feedback --pr M`, fix it on the same branch, re-verify, push, and reply on the PR with what changed. If feedback changes scope, ask the user first. |
+| `open PR (committed on <branch>)` | Push the branch and open the PR (Step 7). "PR draft pr-….md" means an earlier attempt was blocked: reuse that draft but regenerate its screenshot links, then retry. **One PR per branch.** Several tickets on one branch (like `review/tickets-1-5`) share one PR with a `Closes #N` line each, so run `pr-create` once for the branch, not once per ticket. |
+| `post ticket comment (…)` | The PR is open but the ticket comment never went out. Post the saved `comment-<N>.md` (Step 7). |
+| `address feedback (PR #M: …)` | Read it with `github.mjs pr-feedback --pr M`, fix it on the same branch, re-verify, push, and reply on the PR with `github.mjs comment --issue M --body-file …` saying what changed. Feedback counts as handled once you've both pushed and replied after it. If feedback changes scope, ask the user first. |
 | `awaiting review (PR #M)` | Nothing to do; list it in the report. |
 | `PR #M closed without merging` | Ask the user whether to rework or drop the ticket. |
 | `done …` | Skip. |
@@ -75,13 +78,21 @@ for two features at once.
 git switch -c ticket/<N>-<short-slug> <base>
 ```
 
-`<base>` is `main`, unless the ticket builds on work that is in an unmerged PR. Then branch from
-that PR's branch and open your PR against it (a stacked PR; say "Depends on #M" in the body).
-GitHub retargets it to `main` when the lower PR merges. Check with `git log main..<branch>` that
-everything the ticket needs (CLAUDE.md, the project, this skill) is in the base.
+`<base>` is `main`, unless the ticket builds on work that isn't merged into `main` yet. Then
+branch from the branch that has that work, whether or not it has a PR, and later open your PR
+against it (a stacked PR; say "Depends on #M", or "depends on branch X" if it has no PR). The
+base branch must exist on GitHub before your PR can target it, so if it was never pushed,
+push it and open its PR first. Check the base actually has what you need, e.g.
+`git show <base>:CLAUDE.md` and `git ls-tree --name-only <base> <project>/`.
+
+GitHub moves a stacked PR to `main` by itself only if the lower PR's branch is deleted on merge.
+Otherwise, once the lower PR is merged, re-run `pr-create` for your branch with `--base main`
+(it updates the open PR).
 
 Keep notes for the ticket in `.git/factory-loop/ticket-<N>.md` (never committed): questions and
-answers, the plan, and "Plan approved: yes (date)". This file is how a later run resumes.
+answers, the plan, and "Plan approved: yes (date)". This file and the branch are how a later run
+resumes. If the session ends while a question or approval is pending, the next run sees
+`in progress`, reads the notes, and asks again.
 
 ## Step 5: Build tickets: clarify, plan, approve
 
@@ -136,26 +147,27 @@ Closes #N
 Co-Authored-By: <the session's attribution trailer, if any>
 ```
 
-Push the branch (`git push -u origin ticket/<N>-<slug>`), never `main`. Then write the PR body to
-`.git/factory-loop/pr-<N>.md` and open the PR:
+Then, in this order (the screenshot links are pinned to the commit at `HEAD`, so generate them
+after the last commit and push):
 
-```sh
-node .claude/skills/factory-loop/scripts/github.mjs image-md --dir <project>/docs/screenshots/ticket-<N>
-node .claude/skills/factory-loop/scripts/github.mjs pr-create --head ticket/<N>-<slug> --base <base> \
-     --title "<Ticket title>" --body-file .git/factory-loop/pr-<N>.md
-```
+1. `git push -u origin ticket/<N>-<slug>`. Push the ticket branch, never `main`.
+2. `github.mjs image-md --dir <project>/docs/screenshots/ticket-<N>` for the screenshot markdown.
+3. Write the PR body to `.git/factory-loop/pr-<branch-with-dashes>.md` (e.g.
+   `pr-ticket-6-edit-tasks.md`). Sections: **Ticket** (`Closes #N`, one line per ticket),
+   **What was built**, **Decisions** (Q&A), **Verification** (tests, browser checklist),
+   **Screenshots**, **Depends on** (if stacked).
+4. `github.mjs pr-create --head <branch> --base <base> --title "<Ticket title>" --body-file <that file>`.
+5. Write the ticket comment to `.git/factory-loop/comment-<N>.md` (PR link, one-line summary,
+   the same screenshots), then `github.mjs comment --issue <N> --body-file <that file>`. Once it
+   posts, it is renamed `.posted.md`, which is how later runs know it went out.
 
-PR body sections: **Ticket** (`Closes #N`), **What was built**, **Decisions** (Q&A),
-**Verification** (tests, browser checklist), **Screenshots** (the `image-md` output; links are
-pinned to the pushed commit), **Depends on** (if stacked). Then attach the screenshots to the
-ticket: write a short comment (PR link, one-line summary, the same screenshots) to
-`.git/factory-loop/comment-<N>.md` and post it with
-`github.mjs comment --issue <N> --body-file …`.
+(`github.mjs` = `node .claude/skills/factory-loop/scripts/github.mjs`.)
 
-**If GitHub refuses** (no token: exit 3; push 403; API 403/404): don't retry in a loop or touch
-credentials. The branch, commits, screenshots and PR draft stay ready locally. Report the exact
-error and the fix (a token with write access via `GITHUB_TOKEN`/`gh auth login`, or push access
-for the signed-in account). The next run sees "open PR … draft saved" and retries.
+**If GitHub refuses** (no token: exit 3; push 403; API 403/404): still write both drafts, then
+stop. Don't retry in a loop or touch credentials. Everything stays ready locally. Report the
+exact error and the fix (a token with write access via `GITHUB_TOKEN`/`gh auth login`, or push
+access for the signed-in account). The next run sees "open PR … PR draft …" and retries from
+step 1, regenerating the screenshot links.
 
 ## Step 8: Wait for review
 
@@ -164,10 +176,10 @@ comments (`address feedback`) and merged PRs (`done`).
 
 ## Ending a run: the Stop hook
 
-On every stop, `.claude/hooks/auto-commit.mjs` appends your prompts to
-`.claude/logs/prompts.jsonl` and then:
-- on a **ticket/review branch**, it commits everything and pushes that branch, which updates the PR;
-- on **`main`**, it commits only the prompt log and warns about anything else.
+On every stop, the hooks append your prompts to `.claude/logs/prompts.jsonl` (gitignored) and
+publish it to its own `prompt-log` branch, never to ticket branches or `main`. Then:
+- on a **ticket/review branch**, the hook commits everything and pushes that branch, which updates the PR;
+- on **`main`**, it commits and pushes nothing, and only warns about leftovers.
 
 So don't leave broken work in the tree when a run ends: finish the step, or park it with
 `git stash push -u -m "factory-loop: WIP #N <reason>"` and say so in the report. Pausing for the

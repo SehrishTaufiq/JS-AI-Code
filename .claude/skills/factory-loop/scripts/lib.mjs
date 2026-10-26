@@ -83,7 +83,13 @@ export async function api(method, urlPath, body) {
   const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (res.status === 304 && cached) return cached.body;
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // Non-JSON body (e.g. an HTML error page from a 5xx); keep the status, report the text.
+    if (res.ok) throw new ApiError(res.status, `GitHub API ${res.status} ${method} ${urlPath}: unexpected non-JSON response`);
+  }
   if (!res.ok) {
     let msg = `GitHub API ${res.status} ${method} ${urlPath}: ${data?.message || text.slice(0, 200)}`;
     if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') {
@@ -106,6 +112,11 @@ export async function apiList(urlPath) {
     out.push(...batch);
     if (batch.length < 100) return out;
   }
+}
+
+// Draft PR bodies are named after the branch: review/tickets-1-5 -> pr-review-tickets-1-5.md
+export function prDraftPath(branch) {
+  return path.join(stateDir(), `pr-${branch.replace(/[^\w.-]+/g, '-')}.md`);
 }
 
 export function arg(args, flag) {
