@@ -36,3 +36,4 @@ Never copy project details up into this file. Link to them from the index instea
 
 | Folder | What it is | Tickets | Details |
 |---|---|---|---|
+| [`research/`](research/README.md) | Answers to question tickets, with sources | #1 | [README](research/README.md) |
