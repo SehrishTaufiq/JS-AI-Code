@@ -17,35 +17,45 @@
   const filter = { status: 'all', tag: '' };
 
   try {
-    store = await TodoDB.connect();
+    store = await TodoDB.connect({ onLost: lockUp });
     tasks = (await store.all()).map(Tasks.normalizeTask);
   } catch (err) {
-    showError('Could not open the task database: ' + (err && err.message ? err.message : err));
-    form.querySelector('button').disabled = true;
+    lockUp('Could not open the task database: ' + (err && err.message ? err.message : err));
     return;
   }
   render();
 
+  // Keep other open tabs in sync: after each saved change, tell them to reload from storage.
+  const channel = 'BroadcastChannel' in window ? new BroadcastChannel('todo-app') : null;
+  if (channel) {
+    channel.onmessage = async () => {
+      tasks = (await store.all()).map(Tasks.normalizeTask);
+      render();
+    };
+  }
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const fields = [titleInput, dueInput, tagsInput, repeatInput];
+    const values = fields.map((f) => f.value);
     let task;
     try {
-      task = Tasks.createTask({
-        title: titleInput.value,
-        dueDate: dueInput.value,
-        tags: tagsInput.value,
-        repeat: repeatInput.value,
-      });
+      task = Tasks.createTask({ title: values[0], dueDate: values[1], tags: values[2], repeat: values[3] });
     } catch {
       titleInput.focus();
       return;
     }
+    // Clear the form before the save finishes, so a fast user can type the next task without the
+    // pending save wiping it afterwards.
+    form.reset();
+    titleInput.focus();
     if (await persist(() => store.put(task))) {
       tasks.push(task);
-      form.reset();
       render();
+    } else if (fields.every((f, i) => f.value === f.defaultValue || (i === 3 && f.value === ''))) {
+      // Save failed and nothing new was typed: give the user their input back.
+      fields.forEach((f, i) => (f.value = values[i]));
     }
-    titleInput.focus();
   });
 
   statusFilter.addEventListener('change', (event) => {
@@ -95,6 +105,7 @@
     try {
       await write();
       showError('');
+      if (channel) channel.postMessage('changed');
       return true;
     } catch (err) {
       showError('Could not save your change: ' + (err && err.message ? err.message : err));
@@ -106,7 +117,9 @@
     renderTagOptions();
     const today = Tasks.toDateString();
     const visible = Tasks.sortTasks(Tasks.filterTasks(tasks, filter));
+    const focus = focusedControl();
     list.replaceChildren(...visible.map((t) => renderItem(t, today)));
+    restoreFocus(focus);
 
     empty.hidden = visible.length > 0;
     empty.textContent = tasks.length ? 'No tasks match these filters.' : 'No tasks yet. Add one above.';
@@ -116,6 +129,24 @@
     count.textContent = !tasks.length
       ? ''
       : `${left} of ${tasks.length} left` + (filtered ? ` · showing ${visible.length}` : '');
+  }
+
+  // The list is rebuilt on every change, which would drop keyboard focus; remember which control
+  // in which task had it (checkbox, delete or tag chip) and put it back afterwards.
+  function focusedControl() {
+    const el = document.activeElement;
+    const li = el && list.contains(el) ? el.closest('li') : null;
+    if (!li) return null;
+    const kind = el.matches('input[type="checkbox"]') ? 'input[type="checkbox"]' : el.matches('button.delete') ? 'button.delete' : null;
+    const selector = kind || (el.matches('button.tag') ? `button.tag[data-tag="${CSS.escape(el.dataset.tag)}"]` : null);
+    return selector ? { id: li.dataset.id, selector } : null;
+  }
+
+  function restoreFocus(focus) {
+    if (!focus) return;
+    const li = list.querySelector(`li[data-id="${CSS.escape(focus.id)}"]`);
+    const el = li && li.querySelector(focus.selector);
+    if (el) el.focus();
   }
 
   // Rebuilds the tag dropdown from tags in use; drops the tag filter if its tag is gone.
@@ -192,5 +223,12 @@
   function showError(message) {
     errorBox.textContent = message;
     errorBox.hidden = !message;
+  }
+
+  // The database is unusable: say so and stop accepting changes that could not be saved.
+  function lockUp(message) {
+    showError(message);
+    form.querySelectorAll('input, select, button').forEach((el) => (el.disabled = true));
+    list.querySelectorAll('input, button').forEach((el) => (el.disabled = true));
   }
 })();

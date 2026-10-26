@@ -11,7 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { apiList, arg, git, MARKER, prDraftPath, quietEnv, repoSlug, saveCache, stateDir } from './lib.mjs';
+import { apiList, arg, factoryConfig, git, MARKER, prDraftPath, quietEnv, repoSlug, saveCache, stateDir } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const state = arg(args, '--state') ?? 'all';
@@ -88,9 +88,16 @@ function unpostedComment(n) {
   return existing(path.join(stateDir(), `comment-${n}.md`));
 }
 
+const { allowedAuthors } = factoryConfig();
+
 async function classify(issue, prs) {
   const n = issue.number;
   const local = localWork(n);
+  // Public repo: anyone can open an issue, and its text drives the agent. Untrusted tickets are
+  // never built (closed ones are still reported as done).
+  if (issue.state === 'open' && !allowedAuthors.includes(String(issue.user?.login).toLowerCase())) {
+    return { local, pr: null, action: `skipped (untrusted author ${issue.user?.login}; not in .claude/factory.json)` };
+  }
   const pr = prs
     .filter((p) => p.head.ref.startsWith(`ticket/${n}-`) || closesRe(n).test(p.body || ''))
     .sort((a, b) => b.number - a.number)[0];

@@ -186,3 +186,58 @@ test('normalizeTask upgrades v2 tasks (no repeat fields) and drops repeat withou
   assert.equal(Tasks.normalizeTask({ ...v2, dueDate: null, repeat: 'daily' }).repeat, null);
   assert.equal(Tasks.normalizeTask({ ...v2, dueDate: '2026-01-31', repeat: 'monthly' }).repeatDay, 31);
 });
+
+// --- Edge cases (hardening) ---
+
+test('parseDueDate rejects impossible calendar dates', () => {
+  for (const bad of ['2026-13-01', '2026-00-10', '2026-02-30', '2026-04-31', '2025-02-29', '2026-1-1x']) {
+    assert.equal(Tasks.parseDueDate(bad), null, bad);
+  }
+  assert.equal(Tasks.parseDueDate('2028-02-29'), '2028-02-29', 'leap day is real');
+  assert.equal(Tasks.parseDueDate(' 2026-12-31 '), '2026-12-31', 'surrounding spaces trimmed');
+});
+
+test('normalizeTask survives junk stored data', () => {
+  const junk = { id: 'j', title: 'x', done: false, createdAt: 1, dueDate: 'not a date', tags: 'Work, home', repeat: 'WEEKLY', nextId: undefined };
+  const n = Tasks.normalizeTask(junk);
+  assert.equal(n.dueDate, null);
+  assert.deepEqual(n.tags, ['work', 'home'], 'a tags string is parsed');
+  assert.equal(n.repeat, null, 'repeat without a valid date is dropped');
+  assert.equal(n.nextId, null);
+  assert.deepEqual(Tasks.normalizeTask({ ...junk, tags: 42 }).tags, ['42']);
+  assert.deepEqual(Tasks.normalizeTask({ ...junk, tags: null }).tags, []);
+  assert.equal(Tasks.normalizeTask({ ...junk, dueDate: '2026-10-26', repeat: 'Weekly ' }).repeat, 'weekly');
+  assert.equal(Tasks.normalizeTask({ ...junk, dueDate: '2026-10-26', repeat: 'hourly' }).repeat, null);
+});
+
+test('tags: unicode and emoji kept, a lone # dropped', () => {
+  assert.deepEqual(Tasks.parseTags('#Ürgent, 日本, 🚀, #, ##, ÜRGENT'), ['ürgent', '日本', '🚀']);
+});
+
+test('very long and unicode titles are kept intact', () => {
+  const long = 'é'.repeat(5000);
+  assert.equal(make(long, 1, 'a').title, long);
+  assert.equal(make('  Привет 👋  ', 1, 'b').title, 'Привет 👋');
+});
+
+test('title made only of whitespace characters (tabs, newlines, nbsp) is rejected', () => {
+  assert.throws(() => make('\t\n \u00a0'), /title is required/);
+});
+
+test('createTask with repeat and an invalid date falls back to due today', () => {
+  const now = new Date(2026, 9, 26, 12).getTime();
+  const t = Tasks.createTask({ title: 'x', repeat: 'daily', dueDate: '2026-02-30' }, now, 'a');
+  assert.equal(t.dueDate, '2026-10-26');
+});
+
+test('completeTask on a stored repeating task without a date only marks it done', () => {
+  const stored = Tasks.normalizeTask({ id: 'a', title: 'x', done: false, createdAt: 1, dueDate: null, tags: [], repeat: 'daily' });
+  const { done, next } = Tasks.completeTask(stored, '2026-10-26');
+  assert.equal(done.done, true);
+  assert.equal(next, null);
+});
+
+test('filterTasks with an unknown status behaves like all', () => {
+  const tasks = [make('a', 1, 'a'), Tasks.toggleDone(make('b', 2, 'b'))];
+  assert.equal(Tasks.filterTasks(tasks, { status: 'bogus' }).length, 2);
+});

@@ -19,10 +19,14 @@
     return [...new Set(tags)];
   }
 
-  // Accepts "YYYY-MM-DD" (what <input type="date"> produces); anything else is no due date.
+  // Accepts a real calendar date as "YYYY-MM-DD" (what <input type="date"> produces); anything
+  // else, including impossible dates like 2026-13-45 or 2026-02-30, is no due date.
   function parseDueDate(value) {
     const s = String(value ?? '').trim();
-    return DATE_RE.test(s) ? s : null;
+    if (!DATE_RE.test(s)) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d ? s : null;
   }
 
   function parseRepeat(value) {

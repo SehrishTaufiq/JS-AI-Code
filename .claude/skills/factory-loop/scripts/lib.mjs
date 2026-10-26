@@ -35,8 +35,12 @@ export function stateDir() {
   return dir;
 }
 
+// GITHUB_PERSONAL_ACCESS_TOKEN is the variable the GitHub MCP plugin reads, so one token can
+// serve both.
 export function token() {
-  if (process.env.GITHUB_TOKEN || process.env.GH_TOKEN) return process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const env = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+  if (env) return env;
+  if (process.env.FACTORY_NO_GH) return null; // tests: never pick up the machine's gh login
   try {
     return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
   } catch {
@@ -69,7 +73,9 @@ export class ApiError extends Error {
 
 // GitHub REST call. GETs are ETag-cached; other methods need a token.
 export async function api(method, urlPath, body) {
-  const url = urlPath.startsWith('http') ? urlPath : `https://api.github.com${urlPath}`;
+  // FACTORY_API_BASE points the scripts at a fake GitHub API in tests.
+  const base = process.env.FACTORY_API_BASE || 'https://api.github.com';
+  const url = urlPath.startsWith('http') ? urlPath : `${base}${urlPath}`;
   const headers = { 'User-Agent': 'factory-loop', Accept: 'application/vnd.github+json' };
   const tok = token();
   if (tok) headers.Authorization = `Bearer ${tok}`;
@@ -111,6 +117,18 @@ export async function apiList(urlPath) {
     const batch = await api('GET', `${urlPath}${sep}per_page=100&page=${page}`);
     out.push(...batch);
     if (batch.length < 100) return out;
+  }
+}
+
+// .claude/factory.json: { allowedAuthors: [...] }. Missing file or list = nobody is trusted, so a
+// misconfigured repo builds nothing rather than everything.
+export function factoryConfig() {
+  const root = git('rev-parse', '--show-toplevel') || process.cwd();
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'factory.json'), 'utf8'));
+    return { allowedAuthors: (cfg.allowedAuthors || []).map((a) => String(a).toLowerCase()) };
+  } catch {
+    return { allowedAuthors: [] };
   }
 }
 

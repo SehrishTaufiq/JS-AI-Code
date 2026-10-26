@@ -31,19 +31,25 @@ Every ticket ends as committed files, never only a chat answer, and nothing dest
 
 1. Read the issue: `Ticket #N` on GitHub. Work on a branch `ticket/<N>-<slug>`, never on `main`.
 2. Building a project or feature? Ask clarifying questions, then get the plan approved first.
-3. Build in the project's folder (or a new folder + README + index row), with tests.
-4. Verify: tests, plus Chrome DevTools in the browser for UI, with screenshots in
-   `<project>/docs/screenshots/ticket-<N>/`.
+3. Build in the project's folder (or a new folder + README + index row), with unit and
+   Playwright tests (`e2e-test` skill).
+4. Verify: `qa-tester` subagent runs the tests and checks the UI in Chrome DevTools, with
+   screenshots in `<project>/docs/screenshots/ticket-<N>/`; `security-reviewer` checks the diff.
 5. Push the branch and open a PR (`Closes #N`, screenshots); comment on the ticket with them.
 6. A human reviews and merges. The loop never merges PRs or closes issues.
 
-## Automation (`.claude/`)
+Only tickets from authors in `.claude/factory.json` are built (the repo is public).
 
-- **Stop hook** ([`.claude/settings.json`](.claude/settings.json)): on every stop, appends new prompts
-  to `.claude/logs/prompts.jsonl` and publishes them to the `prompt-log` branch, then commits and
-  pushes the current ticket branch (never forces). On `main` it commits nothing.
-- **Deny rules** in the same file block destructive commands (`rm -rf`, force-push, `reset --hard`...),
-  merging PRs, closing issues and pushing to `main`.
+## Automation and security (`.claude/`, see [SECURITY.md](SECURITY.md))
+
+- **Hooks** ([`.claude/settings.json`](.claude/settings.json)): a *PreToolUse guard* blocks destructive
+  shell commands and writes to guardrail files; *PostToolUse* runs the related tests after edits;
+  on *Stop*, prompts (secrets masked) go to the `prompt-log` branch and the ticket branch is
+  committed and pushed (never on `main`, never forced).
+- **Guardrail files** (settings, hooks, factory scripts, `factory.json`, `.gitignore`, CI) can only
+  be changed by the user.
+- **Plugins**: chrome-devtools-mcp, github, security-guidance, pr-review-toolkit.
+- **Tests**: `node --test ".claude/tests/*.test.mjs"` (factory); `cd todo && npm run test:all` (app). CI runs both.
 
 ## Project index
 

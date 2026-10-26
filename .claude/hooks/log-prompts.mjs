@@ -5,8 +5,10 @@
 //
 // Covers both normal prompts (transcript "user" entries from a human) and messages typed
 // while Claude was working (transcript "attachment" entries of type queued_command).
+// The log is pushed to a public branch, so token-like strings are masked before writing.
 import fs from 'node:fs';
 import path from 'node:path';
+import { redact } from './secrets.mjs';
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const logFile = path.join(projectDir, '.claude', 'logs', 'prompts.jsonl');
@@ -69,7 +71,7 @@ for (const entry of readJsonl(input.transcript_path)) {
     session_id: input.session_id || entry.sessionId,
     uuid: p.uuid,
     source: p.source,
-    prompt: p.text,
+    prompt: redact(p.text),
     ...(p.images ? { images: p.images } : {}),
   });
 }

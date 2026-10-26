@@ -43,7 +43,7 @@ form { display: grid; gap: 8px; }
 
 .details { flex-wrap: wrap; }
 
-.details label, .tag-filter {
+.field {
   display: flex;
   align-items: center;
   gap: 8px;

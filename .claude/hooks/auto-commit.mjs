@@ -14,6 +14,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { findSecrets } from './secrets.mjs';
 
 const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 // Never let git wait for a password prompt or credential GUI inside a hook.
@@ -101,7 +102,12 @@ if (branch.out === defaultBranch || branch.out === LOG_BRANCH) {
 
 git(['add', '-A']);
 const staged = git(['diff', '--cached', '--name-only']).split(/\r?\n/).filter(Boolean);
-const secrets = staged.filter((f) => SECRET.test(f));
+// Leave out secret-looking files: by name, or by content (token formats in the staged text).
+function hasSecretContent(file) {
+  const blob = tryGit(['show', `:${file}`]);
+  return blob.ok && !blob.out.includes('\u0000') && findSecrets(blob.out).length > 0;
+}
+const secrets = staged.filter((f) => SECRET.test(f) || hasSecretContent(f));
 if (secrets.length) {
   git(['restore', '--staged', '--', ...secrets]);
   notes.push(`left out ${secrets.length} secret-looking file(s): ${secrets.join(', ')}`);

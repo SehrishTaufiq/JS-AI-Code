@@ -1,0 +1,4 @@
+{
+  "$comment": "Factory loop config. The repo is public, so only tickets opened by these GitHub accounts are built; others are reported as skipped. Editing this file needs the user (it is a protected guardrail file).",
+  "allowedAuthors": ["mashhoodr", "Sehrish-Lodhi_Jonas"]
+}

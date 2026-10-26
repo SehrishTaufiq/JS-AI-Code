@@ -1,0 +1,20 @@
+[
+  {"query": "please fetch the issues from my repository and work through them", "should_trigger": true},
+  {"query": "any new tickets on github? if so pick them up", "should_trigger": true},
+  {"query": "run the loop", "should_trigger": true},
+  {"query": "work the backlog - there should be a ticket about recurring tasks and one about editing", "should_trigger": true},
+  {"query": "check if anyone left feedback on my open PRs for the todo app and fix it", "should_trigger": true},
+  {"query": "do all the tickets", "should_trigger": true},
+  {"query": "Ticket #6 just came in, can you handle it the usual way (questions, plan, PR)?", "should_trigger": true},
+  {"query": "push whatever is committed but not on github yet and open the PR for tickets 1-5", "should_trigger": true},
+  {"query": "/loop 10m process new issues", "should_trigger": true},
+  {"query": "what does the recurring tasks code in todo/tasks.js do when a task is overdue?", "should_trigger": false},
+  {"query": "write a playwright test for the tag filter in the todo app", "should_trigger": false},
+  {"query": "create a new github issue asking for a dark mode toggle", "should_trigger": false},
+  {"query": "review PR #60 for security problems", "should_trigger": false},
+  {"query": "fix the failing unit test in todo/tests/tasks.test.js", "should_trigger": false},
+  {"query": "explain how the Stop hook publishes the prompt log to its own branch", "should_trigger": false},
+  {"query": "summarize what tickets #1 to #5 asked for, don't change anything", "should_trigger": false},
+  {"query": "add mashhoodr's colleague to the factory allowlist", "should_trigger": false},
+  {"query": "set up branch protection on main for this repo", "should_trigger": false}
+]
