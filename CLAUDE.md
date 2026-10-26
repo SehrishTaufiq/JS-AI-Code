@@ -50,6 +50,8 @@ Only tickets from authors in `.claude/factory.json` are built (the repo is publi
   be changed by the user.
 - **Plugins**: chrome-devtools-mcp, github, security-guidance, pr-review-toolkit.
 - **Tests**: `node --test ".claude/tests/*.test.mjs"` (factory); `cd todo && npm run test:all` (app). CI runs both.
+- **Evals** ([EVALS.md](EVALS.md)): mutation testing and a requirements matrix check the tests;
+  scenario and trigger evals check the AI follows the loop. Add a case whenever it gets something wrong.
 
 ## Project index
 
