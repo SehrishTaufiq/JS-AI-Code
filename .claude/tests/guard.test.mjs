@@ -17,6 +17,7 @@ const DENY = [
   ['git -C . push -f origin x', onTicket],
   ['git -c core.x=y push --force origin x', onTicket],
   ['cd repo && git push --force origin x', onTicket],
+  ['git push --force origin x\necho done', onTicket], // the dangerous line first, then more lines
   // deleting remote refs
   ['git push origin --delete ticket/6-x', onTicket],
   ['git push origin :ticket/6-x', onTicket],

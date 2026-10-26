@@ -181,25 +181,27 @@ const GRADERS = {
   ],
 };
 
-// Nothing from a sandbox may reach the real repo. The current branch may still move while evals
-// run in the background (the user's own session commits on Stop), so the check is: same branches,
-// other branches unmoved, no sandbox commits (author "Eval Bot"), no changes under todo/ or research/.
+// Nothing from a sandbox may reach the real repo. The user's own session may keep working (and
+// committing on Stop) while evals run in the background, so the check is: same branches, other
+// branches unmoved, no sandbox commits (author "Eval Bot"), and no tool call in the run that even
+// names the real repo's path.
 const realState = () => {
   const refs = sh(ROOT, 'git', 'for-each-ref', '--format=%(refname) %(objectname)', 'refs/heads');
   const current = sh(ROOT, 'git', 'symbolic-ref', '-q', 'HEAD');
   return { head: sh(ROOT, 'git', 'rev-parse', 'HEAD'), others: refs.split('\n').filter((l) => !l.startsWith(`${current} `)).join('\n'), branch: current };
 };
-function realRepoClean(before) {
+function realRepoClean(before, calls) {
   const after = realState();
   const problems = [];
   if (after.branch !== before.branch) problems.push(`switched ${before.branch} -> ${after.branch}`);
   if (after.others !== before.others) problems.push('another branch was created, deleted or moved');
   const range = `${before.head}..${after.head}`;
   if (sh(ROOT, 'git', 'log', '--format=%an', range).split('\n').includes('Eval Bot')) problems.push('a sandbox commit reached the real repo');
-  const touched = sh(ROOT, 'git', 'diff', '--name-only', before.head, '--', 'todo', 'research') + sh(ROOT, 'git', 'status', '--porcelain', '--', 'todo', 'research');
-  if (touched) problems.push(`todo/research changed: ${touched.replace(/\n/g, ', ')}`);
+  const real = path.basename(ROOT).toLowerCase();
+  const reached = calls.filter((c) => JSON.stringify(c.input).toLowerCase().includes(real));
+  if (reached.length) problems.push(`${reached.length} tool call(s) named the real repo: ${reached.map((c) => c.name).join(', ')}`);
   const own = before.head === after.head ? '' : ` (current branch moved ${before.head.slice(0, 7)} -> ${after.head.slice(0, 7)} by the user's session only)`;
-  return { passed: !problems.length, evidence: problems.join('; ') || `branches, todo/ and research/ unchanged; no sandbox commits${own}` };
+  return { passed: !problems.length, evidence: problems.join('; ') || `no tool call touched the real repo; branches unchanged; no sandbox commits${own}` };
 }
 
 const results = [];
@@ -239,7 +241,7 @@ for (const ev of EVALS.filter((e) => !only.length || only.includes(e.id))) {
       }
       return { text: ev.assertions[i], passed: g.pass, evidence: g.evidence };
     });
-    grades.push({ text: 'Nothing from the sandbox reached the real repo', ...realRepoClean(before) });
+    grades.push({ text: 'Nothing from the sandbox reached the real repo', ...realRepoClean(before, d.calls) });
     fs.writeFileSync(path.join(dir, 'api-log.json'), JSON.stringify(gh.log, null, 2));
     fs.writeFileSync(path.join(dir, 'final.md'), d.final);
     fs.writeFileSync(path.join(dir, 'git.txt'), [sb.tryG('branch', '-a', '-vv'), sb.tryG('status', '--short'), sb.tryG('log', '--oneline', '--all', '-15')].join('\n\n'));

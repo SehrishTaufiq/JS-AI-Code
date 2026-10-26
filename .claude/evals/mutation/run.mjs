@@ -1,12 +1,13 @@
 // Mutation testing: are the tests good enough to catch real bugs?
 //
 //   node .claude/evals/mutation/run.mjs              # all mutants
-//   node .claude/evals/mutation/run.mjs --only T04,G10
+//   node .claude/evals/mutation/run.mjs --only=T04,G10
 //
 // Copies the code under test into a temp folder (the repo itself is never modified), checks the
 // suites pass there unchanged, then plants each mutant from mutants.mjs one at a time and runs
 // its suites. Killed = a test failed (good). Survived = every test still passed (a test gap).
-// Results: .git/factory-loop/evals/mutation.json
+// Results: .git/factory-loop/evals/mutation.json. An --only run updates just those mutants there
+// and keeps the earlier results of the rest (the eval-after-tests hook relies on this).
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -30,7 +31,8 @@ const SUITES = {
 const COPY = ['todo', '.claude/hooks', '.claude/tests', '.claude/skills/factory-loop/scripts', '.claude/factory.json'];
 const SKIP = new Set(['node_modules', 'test-results', 'playwright-report', 'screenshots']);
 
-const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
+const onlyAt = process.argv.indexOf('--only');
+const only = ((process.argv.find((a) => a.startsWith('--only=')) || '').slice(7) || (onlyAt > -1 ? process.argv[onlyAt + 1] || '' : '')).split(',').filter(Boolean);
 const mutants = only.length ? MUTANTS.filter((m) => only.includes(m.id)) : MUTANTS;
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-mutation-'));
@@ -86,11 +88,23 @@ for (const m of mutants) {
   console.log(`${m.id} ${status.toUpperCase().padEnd(8)} ${m.bug}${killedBy ? `  <- ${killedBy.failed[0] || killedBy.suite}` : ''}`);
 }
 
-const killed = results.filter((r) => r.status === 'killed').length;
-const valid = results.filter((r) => r.status !== 'invalid').length;
-const summary = { date: new Date().toISOString(), killed, survived: valid - killed, invalid: results.length - valid, score: valid ? Math.round((killed / valid) * 100) : 0, results };
+function summarize(list) {
+  const killed = list.filter((r) => r.status === 'killed').length;
+  const valid = list.filter((r) => r.status !== 'invalid').length;
+  return { date: new Date().toISOString(), killed, survived: valid - killed, invalid: list.length - valid, score: valid ? Math.round((killed / valid) * 100) : 0, results: list };
+}
 const outDir = path.join(ROOT, '.git', 'factory-loop', 'evals');
+const outFile = path.join(outDir, 'mutation.json');
+// An --only run keeps the earlier results of the mutants it did not run (if they still exist).
+let all = results;
+if (only.length && fs.existsSync(outFile)) {
+  const ran = new Set(results.map((r) => r.id));
+  const previous = new Map((JSON.parse(fs.readFileSync(outFile, 'utf8')).results || []).map((r) => [r.id, r]));
+  all = MUTANTS.map((m) => (ran.has(m.id) ? results.find((r) => r.id === m.id) : previous.get(m.id))).filter(Boolean);
+}
+const summary = summarize(results);
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, 'mutation.json'), JSON.stringify(summary, null, 2));
-console.log(`\nMutation score: ${summary.score}% (${killed}/${valid} killed, ${summary.survived} survived, ${summary.invalid} invalid)`);
+fs.writeFileSync(outFile, JSON.stringify(summarize(all), null, 2));
+console.log(`\nMutation score: ${summary.score}% (${summary.killed}/${summary.killed + summary.survived} killed, ${summary.survived} survived, ${summary.invalid} invalid)`);
+if (all !== results) console.log(`All recorded results (${all.length} of ${MUTANTS.length} mutants): ${summarize(all).score}%`);
 for (const r of results.filter((x) => x.status === 'survived')) console.log(`  SURVIVED ${r.id} ${r.file}: ${r.bug}`);

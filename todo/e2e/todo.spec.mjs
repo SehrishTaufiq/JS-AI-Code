@@ -51,6 +51,30 @@ test.describe('#3 basics', () => {
     await expect(page.getByLabel('New task')).toHaveValue('');
   });
 
+  test('typing the next task while the first is still saving keeps it', async ({ page }) => {
+    // Slow every save down to 500ms, so the second title is typed while the first save is pending.
+    await page.addInitScript(() => {
+      let real;
+      Object.defineProperty(window, 'TodoDB', {
+        configurable: true,
+        get: () => real,
+        set: (db) => {
+          real = {
+            connect: async (opts) => {
+              const store = await db.connect(opts);
+              return { ...store, put: (t) => new Promise((r) => setTimeout(r, 500)).then(() => store.put(t)) };
+            },
+          };
+        },
+      });
+    });
+    await open(page);
+    await add(page, 'First');
+    await page.getByLabel('New task').fill('Second, typed during the save');
+    await expect(item(page, 'First')).toBeVisible();
+    await expect(page.getByLabel('New task')).toHaveValue('Second, typed during the save');
+  });
+
   test('whitespace-only titles are ignored', async ({ page }) => {
     await open(page);
     await add(page, '   \t ');
