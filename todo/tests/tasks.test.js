@@ -8,6 +8,7 @@ test('createTask trims the title and starts not done with no due date or tags', 
   const task = make('  Buy milk  ', 1000, 'a');
   assert.deepEqual(task, {
     id: 'a', title: 'Buy milk', done: false, createdAt: 1000, dueDate: null, tags: [],
+    repeat: null, repeatDay: null, nextId: null,
   });
 });
 
@@ -44,7 +45,7 @@ test('parseDueDate accepts YYYY-MM-DD and rejects anything else', () => {
 
 test('normalizeTask upgrades tasks saved before due dates and tags', () => {
   const legacy = { id: 'a', title: 'old', done: true, createdAt: 1 };
-  assert.deepEqual(Tasks.normalizeTask(legacy), { ...legacy, dueDate: null, tags: [] });
+  assert.deepEqual(Tasks.normalizeTask(legacy), { ...legacy, dueDate: null, tags: [], repeat: null, repeatDay: null, nextId: null });
 });
 
 test('toggleDone flips done without mutating the original', () => {
@@ -107,4 +108,81 @@ test('isOverdue only for incomplete tasks due before today', () => {
   assert.equal(Tasks.isOverdue(make('x', 1, 'x'), today), false);
   const doneLate = Tasks.toggleDone(make('x', 1, 'x', { dueDate: '2026-01-01' }));
   assert.equal(Tasks.isOverdue(doneLate, today), false);
+});
+
+test('parseRepeat accepts daily/weekly/monthly only', () => {
+  assert.equal(Tasks.parseRepeat('Weekly'), 'weekly');
+  for (const bad of ['', null, undefined, 'none', 'yearly']) assert.equal(Tasks.parseRepeat(bad), null);
+});
+
+test('createTask with repeat defaults the due date to today', () => {
+  const now = new Date(2026, 9, 26, 12).getTime();
+  const t = Tasks.createTask({ title: 'Stand-up', repeat: 'daily' }, now, 'a');
+  assert.equal(t.repeat, 'daily');
+  assert.equal(t.dueDate, '2026-10-26');
+  assert.equal(t.nextId, null);
+  assert.equal(make('plain', 1, 'p').repeat, null);
+});
+
+test('createTask monthly remembers the day of month', () => {
+  const t = make('Rent', 1, 'a', { repeat: 'monthly', dueDate: '2026-01-31' });
+  assert.equal(t.repeatDay, 31);
+});
+
+test('nextDueDate steps daily, weekly and monthly', () => {
+  const today = '2026-01-01';
+  assert.equal(Tasks.nextDueDate(make('d', 1, 'd', { repeat: 'daily', dueDate: '2026-01-01' }), today), '2026-01-02');
+  assert.equal(Tasks.nextDueDate(make('w', 1, 'w', { repeat: 'weekly', dueDate: '2026-12-28' }), today), '2027-01-04');
+  assert.equal(Tasks.nextDueDate(make('m', 1, 'm', { repeat: 'monthly', dueDate: '2026-03-15' }), today), '2026-04-15');
+  assert.equal(Tasks.nextDueDate(make('n', 1, 'n'), today), null);
+});
+
+test('monthly repeats clamp to short months and return to the original day', () => {
+  let t = make('Rent', 1, 'a', { repeat: 'monthly', dueDate: '2026-01-31' });
+  const seen = [];
+  for (let i = 0; i < 3; i++) {
+    const { next } = Tasks.completeTask(t, '2000-01-01', i, 'n' + i);
+    seen.push(next.dueDate);
+    t = next;
+  }
+  assert.deepEqual(seen, ['2026-02-28', '2026-03-31', '2026-04-30']);
+  const leap = make('Leap', 1, 'l', { repeat: 'monthly', dueDate: '2028-01-31' });
+  assert.equal(Tasks.nextDueDate(leap, '2000-01-01'), '2028-02-29');
+});
+
+test('nextDueDate skips past dates for overdue tasks', () => {
+  const t = make('Water plants', 1, 'a', { repeat: 'weekly', dueDate: '2026-10-01' });
+  assert.equal(Tasks.nextDueDate(t, '2026-10-26'), '2026-10-29');
+  const d = make('Daily', 1, 'b', { repeat: 'daily', dueDate: '2026-10-20' });
+  assert.equal(Tasks.nextDueDate(d, '2026-10-26'), '2026-10-26');
+});
+
+test('completeTask on a repeating task spawns the next occurrence once', () => {
+  const t = make('Stand-up', 5, 'a', { repeat: 'daily', dueDate: '2026-10-26', tags: 'work' });
+  const first = Tasks.completeTask(t, '2026-10-26', 99, 'b');
+  assert.equal(first.done.done, true);
+  assert.equal(first.done.nextId, 'b');
+  assert.deepEqual(
+    { id: first.next.id, title: first.next.title, done: first.next.done, dueDate: first.next.dueDate, tags: first.next.tags, repeat: first.next.repeat },
+    { id: 'b', title: 'Stand-up', done: false, dueDate: '2026-10-27', tags: ['work'], repeat: 'daily' },
+  );
+  // Untick and tick again: no second copy.
+  const again = Tasks.completeTask(Tasks.toggleDone(first.done), '2026-10-26', 100, 'c');
+  assert.equal(again.next, null);
+  assert.equal(again.done.done, true);
+});
+
+test('completeTask on a plain task only marks it done', () => {
+  const { done, next } = Tasks.completeTask(make('x', 1, 'a'), '2026-10-26');
+  assert.equal(done.done, true);
+  assert.equal(next, null);
+});
+
+test('normalizeTask upgrades v2 tasks (no repeat fields) and drops repeat without a date', () => {
+  const v2 = { id: 'a', title: 't', done: false, createdAt: 1, dueDate: '2026-10-26', tags: ['x'] };
+  const n = Tasks.normalizeTask(v2);
+  assert.equal(n.repeat, null);
+  assert.equal(n.nextId, null);
+  assert.equal(Tasks.normalizeTask({ ...v2, dueDate: null, repeat: 'daily' }).repeat, null);
+  assert.equal(Tasks.normalizeTask({ ...v2, dueDate: '2026-01-31', repeat: 'monthly' }).repeatDay, 31);
 });

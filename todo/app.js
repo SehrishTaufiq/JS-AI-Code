@@ -4,6 +4,7 @@
   const titleInput = document.getElementById('new-task-title');
   const dueInput = document.getElementById('new-task-due');
   const tagsInput = document.getElementById('new-task-tags');
+  const repeatInput = document.getElementById('new-task-repeat');
   const statusFilter = document.getElementById('status-filter');
   const tagFilter = document.getElementById('tag-filter');
   const list = document.getElementById('task-list');
@@ -29,7 +30,12 @@
     event.preventDefault();
     let task;
     try {
-      task = Tasks.createTask({ title: titleInput.value, dueDate: dueInput.value, tags: tagsInput.value });
+      task = Tasks.createTask({
+        title: titleInput.value,
+        dueDate: dueInput.value,
+        tags: tagsInput.value,
+        repeat: repeatInput.value,
+      });
     } catch {
       titleInput.focus();
       return;
@@ -55,9 +61,15 @@
   list.addEventListener('change', async (event) => {
     if (!event.target.matches('input[type="checkbox"]')) return;
     const id = event.target.closest('li').dataset.id;
-    const updated = Tasks.toggleDone(tasks.find((t) => t.id === id));
-    if (await persist(() => store.put(updated))) {
-      tasks = tasks.map((t) => (t.id === id ? updated : t));
+    const task = tasks.find((t) => t.id === id);
+    // Completing a repeating task also creates its next occurrence, saved together.
+    const { done, next } = task.done
+      ? { done: Tasks.toggleDone(task), next: null }
+      : Tasks.completeTask(task, Tasks.toDateString());
+    const changed = next ? [done, next] : [done];
+    if (await persist(() => store.putAll(changed))) {
+      tasks = tasks.map((t) => (t.id === id ? done : t));
+      if (next) tasks.push(next);
     }
     render();
   });
@@ -138,6 +150,12 @@
       const meta = document.createElement('div');
       meta.className = 'meta';
       if (task.dueDate) meta.append(renderDue(task, today));
+      if (task.repeat) {
+        const rep = document.createElement('span');
+        rep.className = 'repeat';
+        rep.textContent = '↻ Repeats ' + task.repeat;
+        meta.append(rep);
+      }
       for (const tag of task.tags) {
         const chip = document.createElement('button');
         chip.type = 'button';

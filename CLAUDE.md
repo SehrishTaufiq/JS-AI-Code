@@ -46,4 +46,4 @@ Every ticket ends as committed files, never only a chat answer, and nothing dest
 | Folder | What it is | Tickets | Details |
 |---|---|---|---|
 | [`research/`](research/README.md) | Answers to question tickets, with sources | #1 | [README](research/README.md) |
-| [`todo/`](todo/README.md) | Browser todo app: IndexedDB storage, filters, due dates, tags | #3, #4 | [README](todo/README.md) |
+| [`todo/`](todo/README.md) | Browser todo app: IndexedDB storage, filters, due dates, tags, recurring tasks | #3, #4, #5 | [README](todo/README.md) |

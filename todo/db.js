@@ -32,6 +32,10 @@
     return {
       all: () => run(db, 'readonly', (s) => s.getAll()),
       put: (task) => run(db, 'readwrite', (s) => s.put(task)),
+      // Writes several tasks in one transaction: all are saved or none are.
+      putAll: (list) => run(db, 'readwrite', (s) => {
+        list.forEach((t) => s.put(t));
+      }),
       remove: (id) => run(db, 'readwrite', (s) => s.delete(id)),
     };
   }

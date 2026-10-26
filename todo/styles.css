@@ -155,6 +155,8 @@ select:disabled { opacity: 0.6; }
 
 .due.overdue { color: var(--danger); font-weight: 600; }
 
+.repeat { color: var(--muted); }
+
 .task .tag {
   padding: 2px 8px;
   font-size: 13px;
