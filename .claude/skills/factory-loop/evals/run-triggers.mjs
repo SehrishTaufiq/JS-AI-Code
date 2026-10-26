@@ -35,7 +35,9 @@ async function judge(q, i) {
     logFile: path.join(dir, `q${String(i + 1).padStart(2, '0')}.jsonl`),
     timeoutMs: 5 * 60_000,
     flags: ['--model', model, '--max-turns', '4', '--max-budget-usd', '1',
-      '--disallowedTools', 'Bash', 'PowerShell', 'Edit', 'Write', 'NotebookEdit', 'Agent', 'WebFetch', 'WebSearch', 'CronCreate', 'ScheduleWakeup', 'RemoteTrigger', 'AskUserQuestion'],
+      '--disallowedTools', 'Bash', 'PowerShell', 'Edit', 'Write', 'NotebookEdit', 'Agent', 'WebFetch', 'WebSearch', 'RemoteTrigger', 'AskUserQuestion'],
+    // CronCreate stays allowed: `/loop` needs it to get as far as starting the skill, and a
+    // schedule made in a headless run ends with that run.
     onEvent: (e, stop) => {
       if (e.type !== 'assistant') return;
       for (const b of e.message?.content || []) {
