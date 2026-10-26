@@ -15,6 +15,22 @@ ticket asked for in a real browser, the way a user would, before calling it done
 - Prefer `take_snapshot` (accessibility tree) over screenshots for checking state; take one
   screenshot at the end to check the layout.
 
+## Screenshots (attached to the PR and the ticket)
+
+The approved plan lists the screenshots. They are evidence for the reviewer, so each one should
+show a single checklist item in a state that makes the result obvious.
+
+- Use a fixed viewport so screenshots line up: `resize_page` to 1280×800 before the first shot.
+- Save straight into the repo:
+  `take_screenshot` with `filePath: <project>/docs/screenshots/ticket-<N>/<NN>-<what>.png`, e.g.
+  `01-empty-state.png`, `02-weekly-task-created.png`, `03-next-occurrence-after-tick.png`. The
+  number gives the order; the rest becomes the caption.
+- Use `fullPage: true` when the list is longer than the viewport.
+- Typical set: the starting state, each feature from the ticket in action, one edge case
+  (no-match filter, validation), and the final state after a reload (to show it persisted).
+- Use a fresh `isolatedContext` per ticket (e.g. `ticket-<N>`) so the screenshots show only this
+  ticket's test data.
+
 ## Checklist
 
 Work through what applies to the ticket:

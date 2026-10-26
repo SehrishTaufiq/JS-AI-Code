@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 // Stop hook: commits any uncommitted work in the repo and pushes the current branch.
+// Work reaches the default branch only through reviewed PRs, so on the default branch (main)
+// this only commits the prompt log and warns about anything else left uncommitted; on a
+// ticket/review branch it commits everything and pushes that branch.
 // Safety rules: never force-pushes, never rewrites history, skips during merge/rebase or on a
 // detached HEAD, refuses to commit files that look like secrets, and never blocks Claude from
 // stopping (always exits 0). The result is shown to the user as a one-line systemMessage.
@@ -10,6 +13,7 @@ const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 // Never let git wait for a password prompt or credential GUI inside a hook.
 const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' };
 const SECRET = /(^|\/)(\.env(\..+)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|id_(rsa|ed25519|ecdsa)|credentials\.json|.*secret.*)$/i;
+const PROMPT_LOG = '.claude/logs/';
 
 try {
   fs.readFileSync(0); // drain the hook payload; not needed here
@@ -41,9 +45,17 @@ const branch = tryGit(['symbolic-ref', '--short', 'HEAD']);
 if (!branch.ok) report('skipped, HEAD is detached');
 
 const notes = [];
+const defaultBranch = (tryGit(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).out || 'origin/main').replace(/^origin\//, '');
+const onDefault = branch.out === defaultBranch;
 
-// 1. Commit whatever is uncommitted (respects .gitignore).
-git(['add', '-A']);
+// 1. Commit what is uncommitted (respects .gitignore). On the default branch, only the prompt log.
+if (onDefault) {
+  git(['add', '-A', '--', PROMPT_LOG]);
+  const left = git(['status', '--porcelain']).split(/\r?\n/).filter((l) => l && !l.slice(3).startsWith(PROMPT_LOG));
+  if (left.length) notes.push(`${left.length} change(s) left uncommitted on ${defaultBranch} (work goes on a ticket branch + PR)`);
+} else {
+  git(['add', '-A']);
+}
 const staged = git(['diff', '--cached', '--name-only']).split(/\r?\n/).filter(Boolean);
 const secrets = staged.filter((f) => SECRET.test(f));
 if (secrets.length) {

@@ -1,147 +1,131 @@
 #!/usr/bin/env node
-// Lists the GitHub issues ("tickets") of the repo in the current directory and, for each,
-// whether a local commit already says "Closes #N" and whether that commit is pushed.
+// Lists the GitHub issues ("tickets") of the repo in the current directory and works out where
+// each one is in the review-first flow: todo, in progress on a branch, ready for a PR, awaiting
+// review, feedback to address, or done (closed after the human merged its PR).
 // Needs only Node 18+ and git; no gh CLI.
 //
 // Usage: node fetch-tickets.mjs [--state all|open|closed] [--json] [--no-fetch]
-// Set GITHUB_TOKEN or GH_TOKEN for private repos or higher rate limits (60/h without, 5000/h with).
-//
-// Runs `git fetch` first so "pushed" is current, and caches API responses by ETag in .git/
-// (never committed): unchanged issue lists come back as 304s, which GitHub does not count
-// against the rate limit, so polling every minute with /loop stays within it.
+// Runs `git fetch` first so remote state is current. API responses are ETag-cached in
+// .git/factory-loop/, so polling every minute stays within the 60/h unauthenticated limit.
+// Set GITHUB_TOKEN or GH_TOKEN for private repos or 5000 requests/hour.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { apiList, arg, git, MARKER, quietEnv, repoSlug, saveCache, stateDir } from './lib.mjs';
 
 const args = process.argv.slice(2);
-const state = valueOf('--state') ?? 'all';
+const state = arg(args, '--state') ?? 'all';
 const asJson = args.includes('--json');
-const noFetch = args.includes('--no-fetch');
-
-function valueOf(flag) {
-  const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : undefined;
-}
-
-function git(...gitArgs) {
-  try {
-    return execFileSync('git', gitArgs, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  } catch {
-    return '';
-  }
-}
-
-function repoSlug() {
-  const url = git('remote', 'get-url', 'origin');
-  const m = url.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
-  if (!m) {
-    console.error(`origin is not a GitHub remote: ${url || '(no origin)'}`);
-    process.exit(2);
-  }
-  return `${m[1]}/${m[2]}`;
-}
-
-const cacheFile = (() => {
-  const p = git('rev-parse', '--git-path', 'factory-loop-cache.json');
-  return p ? path.resolve(p) : null;
-})();
-
-function readCache() {
-  try {
-    return JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-async function fetchIssues(slug) {
-  const headers = { 'User-Agent': 'factory-loop', Accept: 'application/vnd.github+json' };
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const cache = readCache();
-  const issues = [];
-  for (let page = 1; ; page++) {
-    const url = `https://api.github.com/repos/${slug}/issues?state=${state}&per_page=100&page=${page}&sort=created&direction=asc`;
-    const cached = cache[url];
-    const res = await fetch(url, { headers: cached ? { ...headers, 'If-None-Match': cached.etag } : headers });
-    let batch;
-    if (res.status === 304 && cached) {
-      batch = cached.body;
-    } else if (res.ok) {
-      batch = await res.json();
-      if (res.headers.get('etag')) cache[url] = { etag: res.headers.get('etag'), body: batch };
-    } else {
-      console.error(`GitHub API ${res.status} for ${slug}: ${(await res.text()).slice(0, 300)}`);
-      if (res.status === 404 && !token) console.error('Private repo? Set GITHUB_TOKEN or GH_TOKEN.');
-      if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') {
-        const reset = new Date(Number(res.headers.get('x-ratelimit-reset')) * 1000);
-        console.error(`Rate limited until ${reset.toLocaleTimeString()}. Set GITHUB_TOKEN for 5000 requests/hour.`);
-      }
-      process.exit(1);
-    }
-    issues.push(...batch.filter((i) => !i.pull_request)); // the issues API also returns PRs
-    if (batch.length < 100) {
-      if (cacheFile) fs.writeFileSync(cacheFile, JSON.stringify(cache));
-      return issues;
-    }
-  }
-}
-
-// Newest local commit whose message closes #number, and whether a remote branch contains it.
-function localStatus(number) {
-  const pattern = `(close[sd]?|fix(e[sd])?|resolve[sd]?) #${number}([^0-9]|$)`;
-  const sha = git('log', '-1', '--format=%h', '-i', '-E', `--grep=${pattern}`, 'HEAD');
-  if (!sha) return { commit: null, pushed: false };
-  const remotes = git('branch', '-r', '--contains', sha);
-  return { commit: sha, pushed: remotes.length > 0 };
-}
-
-function action(issue, local) {
-  if (issue.state === 'closed') return 'done';
-  if (local.commit && local.pushed) return 'done (pushed, issue not closed yet)';
-  if (local.commit) return 'push only (committed locally, not pushed)';
-  return 'todo';
-}
 
 const slug = repoSlug();
-if (!noFetch) {
+if (!args.includes('--no-fetch')) {
   try {
-    execFileSync('git', ['fetch', '-q', 'origin'], {
-      stdio: 'ignore',
-      timeout: 30_000,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' },
-    });
+    execFileSync('git', ['fetch', '-q', '--prune', 'origin'], { stdio: 'ignore', timeout: 30_000, env: quietEnv });
   } catch {
-    console.error('warning: git fetch failed; "pushed" status may be stale');
+    console.error('warning: git fetch failed; remote status may be stale');
   }
 }
-const issues = await fetchIssues(slug);
-const tickets = issues.map((i) => {
-  const local = localStatus(i.number);
-  return {
+const defaultBranch = (git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD') || 'origin/main').replace(/^origin\//, '');
+
+const closesRe = (n) => new RegExp(`(close[sd]?|fix(e[sd])?|resolve[sd]?) #${n}([^0-9]|$)`, 'i');
+
+// Newest local commit (any branch) that closes #n, and where it lives.
+function localWork(n) {
+  const sha = git('log', '--all', '-1', '--format=%h', '-i', '-E', `--grep=(close[sd]?|fix(e[sd])?|resolve[sd]?) #${n}([^0-9]|$)`);
+  const ticketBranch = git('for-each-ref', '--format=%(refname:short)', `refs/heads/ticket/${n}-*`).split('\n').filter(Boolean)[0] || null;
+  if (!sha) return { commit: null, branches: [], onDefault: false, ticketBranch };
+  const branches = git('branch', '--contains', sha, '--format=%(refname:short)').split('\n').filter(Boolean);
+  let onDefault = false;
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', sha, `origin/${defaultBranch}`], { stdio: 'ignore' });
+    onDefault = true;
+  } catch {}
+  return { commit: sha, branches, onDefault, ticketBranch };
+}
+
+function lastLocalCommitDate(branch) {
+  return git('log', '-1', '--format=%cI', branch) || git('log', '-1', '--format=%cI', `origin/${branch}`);
+}
+
+// Human feedback newer than the branch's last commit means there is something to address.
+async function feedbackSince(pr) {
+  const [reviews, inline, convo] = await Promise.all([
+    apiList(`/repos/${slug}/pulls/${pr.number}/reviews`),
+    apiList(`/repos/${slug}/pulls/${pr.number}/comments`),
+    apiList(`/repos/${slug}/issues/${pr.number}/comments`),
+  ]);
+  const human = [
+    ...reviews.map((r) => ({ at: r.submitted_at, body: r.body || '', state: r.state })),
+    ...inline.map((c) => ({ at: c.created_at, body: c.body })),
+    ...convo.map((c) => ({ at: c.created_at, body: c.body })),
+  ].filter((i) => !i.body.includes(MARKER) && (i.body.trim() || i.state === 'CHANGES_REQUESTED'));
+  const since = lastLocalCommitDate(pr.head.ref);
+  const fresh = since ? human.filter((i) => new Date(i.at) > new Date(since)) : human;
+  return { total: human.length, fresh: fresh.length };
+}
+
+function draftPath(n) {
+  const p = path.join(stateDir(), `pr-${n}.md`);
+  return fs.existsSync(p) ? p : null;
+}
+
+async function classify(issue, prs) {
+  const n = issue.number;
+  const local = localWork(n);
+  const pr = prs
+    .filter((p) => p.head.ref.startsWith(`ticket/${n}-`) || closesRe(n).test(p.body || ''))
+    .sort((a, b) => b.number - a.number)[0];
+  const base = { local, pr: pr ? { number: pr.number, state: pr.state, merged: !!pr.merged_at, url: pr.html_url, head: pr.head.ref, base: pr.base.ref } : null };
+
+  if (issue.state === 'closed') return { ...base, action: 'done' };
+  if (pr?.merged_at) return { ...base, action: `done (PR #${pr.number} merged; issue closes shortly)` };
+  if (pr && pr.state === 'open') {
+    const fb = await feedbackSince(pr);
+    if (fb.fresh) return { ...base, action: `address feedback (PR #${pr.number}: ${fb.fresh} new comment(s))` };
+    return { ...base, action: `awaiting review (PR #${pr.number})` };
+  }
+  if (pr && pr.state === 'closed') return { ...base, action: `PR #${pr.number} closed without merging: ask the user` };
+  if (local.onDefault) return { ...base, action: `done (on ${defaultBranch}; issue not closed yet)` };
+  if (local.commit) {
+    const where = local.branches.join(', ') || 'unknown branch';
+    const draft = draftPath(n);
+    return { ...base, action: `open PR (committed on ${where}${draft ? '; PR draft saved' : ''})`, draft };
+  }
+  if (local.ticketBranch) return { ...base, action: `in progress (branch ${local.ticketBranch})` };
+  return { ...base, action: 'todo' };
+}
+
+const issues = (await apiList(`/repos/${slug}/issues?state=${state}&sort=created&direction=asc`)).filter((i) => !i.pull_request);
+const prs = await apiList(`/repos/${slug}/pulls?state=all`);
+const tickets = [];
+for (const i of issues) {
+  const c = await classify(i, prs);
+  tickets.push({
     number: i.number,
     title: i.title,
     state: i.state,
     author: i.user?.login,
     labels: i.labels.map((l) => l.name),
-    createdAt: i.created_at,
     url: i.html_url,
     body: (i.body || '').trim(),
-    localCommit: local.commit,
-    pushed: local.pushed,
-    action: action(i, local),
-  };
-});
+    action: c.action,
+    localCommit: c.local.commit,
+    branches: c.local.branches,
+    ticketBranch: c.local.ticketBranch,
+    pr: c.pr,
+    draft: c.draft ?? null,
+  });
+}
+saveCache();
 
 if (asJson) {
-  console.log(JSON.stringify({ repo: slug, state, tickets }, null, 2));
+  console.log(JSON.stringify({ repo: slug, defaultBranch, state, tickets }, null, 2));
 } else {
-  console.log(`${slug}: ${tickets.length} ticket(s), state=${state} (remote status as of last git fetch)\n`);
+  console.log(`${slug} (default branch ${defaultBranch}): ${tickets.length} ticket(s), state=${state}\n`);
   for (const t of tickets) {
     const labels = t.labels.length ? ` [${t.labels.join(', ')}]` : '';
-    const commit = t.localCommit ? ` commit ${t.localCommit}` : '';
     console.log(`#${t.number} [${t.state}]${labels} ${t.title}`);
-    console.log(`   -> ${t.action}${commit}`);
+    console.log(`   -> ${t.action}${t.localCommit ? ` commit ${t.localCommit}` : ''}`);
     if (t.body) console.log('   ' + t.body.replace(/\r?\n/g, '\n   '));
     console.log('');
   }

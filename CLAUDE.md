@@ -29,17 +29,21 @@ Never copy project details up into this file. Link to them from the index instea
 Run it with the **`factory-loop`** skill ([`.claude/skills/factory-loop/`](.claude/skills/factory-loop/SKILL.md)).
 Every ticket ends as committed files, never only a chat answer, and nothing destructive.
 
-1. Read the issue: `Ticket #N` on GitHub.
-2. Find the project in the index (or create a new folder + README + index row).
-3. Build the change. Add or update tests where the project has them.
-4. Run the project's tests and check the result in a browser for UI work.
-5. Commit with `Closes #N` in the message and push to `main`.
+1. Read the issue: `Ticket #N` on GitHub. Work on a branch `ticket/<N>-<slug>`, never on `main`.
+2. Building a project or feature? Ask clarifying questions, then get the plan approved first.
+3. Build in the project's folder (or a new folder + README + index row), with tests.
+4. Verify: tests, plus Chrome DevTools in the browser for UI, with screenshots in
+   `<project>/docs/screenshots/ticket-<N>/`.
+5. Push the branch and open a PR (`Closes #N`, screenshots); comment on the ticket with them.
+6. A human reviews and merges. The loop never merges PRs or closes issues.
 
 ## Automation (`.claude/`)
 
 - **Stop hook** ([`.claude/settings.json`](.claude/settings.json)): on every stop, appends new prompts
-  to `.claude/logs/prompts.jsonl`, then commits leftover changes and pushes (never forces).
-- **Deny rules** in the same file block destructive commands (`rm -rf`, force-push, `reset --hard`...).
+  to `.claude/logs/prompts.jsonl`, then commits and pushes the current ticket branch (never forces).
+  On `main` it commits only the prompt log.
+- **Deny rules** in the same file block destructive commands (`rm -rf`, force-push, `reset --hard`...),
+  merging PRs, closing issues and pushing to `main`.
 
 ## Project index
 

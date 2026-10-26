@@ -21,6 +21,12 @@
       "Bash(gh repo delete *)",
       "Bash(gh issue delete *)",
       "Bash(gh release delete *)",
+      "Bash(gh pr merge*)",
+      "Bash(gh issue close*)",
+      "Bash(git push origin main*)",
+      "Bash(git push -u origin main*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(git push origin *:main*)",
       "PowerShell(Remove-Item * -Recurse*)",
       "PowerShell(rm -r *)",
       "PowerShell(rm -rf *)"
@@ -29,6 +35,7 @@
       "Bash(rm *)",
       "Bash(git rebase *)",
       "Bash(git commit --amend*)",
+      "Bash(git merge *)",
       "PowerShell(Remove-Item *)",
       "PowerShell(rm *)",
       "PowerShell(del *)"
