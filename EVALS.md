@@ -41,7 +41,7 @@ headless with every changing tool disabled and is stopped at the first tool call
 |---|---|
 | Tests | factory 147/147, todo unit 32/32, Playwright 29/29 (UTC, Auckland, São Paulo, phone) |
 | Mutation | **70/70 killed** after two new tests (first run: 68/70) |
-| Requirements | 39 requirements, 0 gaps, 0 weak |
+| Requirements | 39 requirements: 30 verified by mutation, 9 covered by tests, 0 weak, 0 gaps |
 | Scenarios | 1 asks first **5/5**, 2 untrusted ticket **3/3**, 3 blocked push **3/4**, 4 review feedback **4/4**, 5 nothing new **2/2**; nothing reached the real repo in any run (*) |
 
 (*) The first version of the "real repo untouched" check compared HEAD, so it failed on scenarios
