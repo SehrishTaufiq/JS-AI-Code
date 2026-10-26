@@ -1,7 +1,11 @@
 // UI wiring: reads/writes tasks through TodoDB and renders them with Tasks helpers.
 (async function () {
   const form = document.getElementById('new-task-form');
-  const input = document.getElementById('new-task-title');
+  const titleInput = document.getElementById('new-task-title');
+  const dueInput = document.getElementById('new-task-due');
+  const tagsInput = document.getElementById('new-task-tags');
+  const statusFilter = document.getElementById('status-filter');
+  const tagFilter = document.getElementById('tag-filter');
   const list = document.getElementById('task-list');
   const empty = document.getElementById('empty-state');
   const count = document.getElementById('task-count');
@@ -9,10 +13,11 @@
 
   let store;
   let tasks = [];
+  const filter = { status: 'all', tag: '' };
 
   try {
     store = await TodoDB.connect();
-    tasks = await store.all();
+    tasks = (await store.all()).map(Tasks.normalizeTask);
   } catch (err) {
     showError('Could not open the task database: ' + (err && err.message ? err.message : err));
     form.querySelector('button').disabled = true;
@@ -24,17 +29,27 @@
     event.preventDefault();
     let task;
     try {
-      task = Tasks.createTask(input.value);
+      task = Tasks.createTask({ title: titleInput.value, dueDate: dueInput.value, tags: tagsInput.value });
     } catch {
-      input.focus();
+      titleInput.focus();
       return;
     }
     if (await persist(() => store.put(task))) {
       tasks.push(task);
-      input.value = '';
+      form.reset();
       render();
     }
-    input.focus();
+    titleInput.focus();
+  });
+
+  statusFilter.addEventListener('change', (event) => {
+    filter.status = event.target.value;
+    render();
+  });
+
+  tagFilter.addEventListener('change', () => {
+    filter.tag = tagFilter.value;
+    render();
   });
 
   list.addEventListener('change', async (event) => {
@@ -48,9 +63,15 @@
   });
 
   list.addEventListener('click', async (event) => {
-    const button = event.target.closest('button.delete');
-    if (!button) return;
-    const id = button.closest('li').dataset.id;
+    const chip = event.target.closest('button.tag');
+    if (chip) {
+      filter.tag = chip.dataset.tag;
+      render();
+      return;
+    }
+    const del = event.target.closest('button.delete');
+    if (!del) return;
+    const id = del.closest('li').dataset.id;
     if (await persist(() => store.remove(id))) {
       tasks = tasks.filter((t) => t.id !== id);
       render();
@@ -70,13 +91,32 @@
   }
 
   function render() {
-    list.replaceChildren(...Tasks.sortTasks(tasks).map(renderItem));
-    empty.hidden = tasks.length > 0;
+    renderTagOptions();
+    const today = Tasks.toDateString();
+    const visible = Tasks.sortTasks(Tasks.filterTasks(tasks, filter));
+    list.replaceChildren(...visible.map((t) => renderItem(t, today)));
+
+    empty.hidden = visible.length > 0;
+    empty.textContent = tasks.length ? 'No tasks match these filters.' : 'No tasks yet. Add one above.';
+
     const left = Tasks.countRemaining(tasks);
-    count.textContent = tasks.length ? `${left} of ${tasks.length} left` : '';
+    const filtered = filter.status !== 'all' || filter.tag;
+    count.textContent = !tasks.length
+      ? ''
+      : `${left} of ${tasks.length} left` + (filtered ? ` · showing ${visible.length}` : '');
   }
 
-  function renderItem(task) {
+  // Rebuilds the tag dropdown from tags in use; drops the tag filter if its tag is gone.
+  function renderTagOptions() {
+    const tags = Tasks.collectTags(tasks);
+    if (filter.tag && !tags.includes(filter.tag)) filter.tag = '';
+    const options = tags.map((tag) => new Option('#' + tag, tag));
+    tagFilter.replaceChildren(new Option('All tags', ''), ...options);
+    tagFilter.value = filter.tag;
+    tagFilter.disabled = tags.length === 0;
+  }
+
+  function renderItem(task, today) {
     const li = document.createElement('li');
     li.dataset.id = task.id;
     li.className = task.done ? 'task done' : 'task';
@@ -86,9 +126,29 @@
     checkbox.checked = task.done;
     checkbox.id = 'task-' + task.id;
 
+    const body = document.createElement('div');
+    body.className = 'body';
+
     const label = document.createElement('label');
     label.htmlFor = checkbox.id;
     label.textContent = task.title;
+    body.append(label);
+
+    if (task.dueDate || task.tags.length) {
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      if (task.dueDate) meta.append(renderDue(task, today));
+      for (const tag of task.tags) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tag';
+        chip.dataset.tag = tag;
+        chip.textContent = '#' + tag;
+        chip.setAttribute('aria-label', `Show tasks tagged ${tag}`);
+        meta.append(chip);
+      }
+      body.append(meta);
+    }
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -96,8 +156,19 @@
     del.textContent = 'Delete';
     del.setAttribute('aria-label', `Delete "${task.title}"`);
 
-    li.append(checkbox, label, del);
+    li.append(checkbox, body, del);
     return li;
+  }
+
+  function renderDue(task, today) {
+    const due = document.createElement('time');
+    due.dateTime = task.dueDate;
+    const overdue = Tasks.isOverdue(task, today);
+    due.className = overdue ? 'due overdue' : 'due';
+    const [y, m, d] = task.dueDate.split('-').map(Number);
+    const pretty = new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    due.textContent = (task.dueDate === today ? 'Due today' : 'Due ' + pretty) + (overdue ? ' · overdue' : '');
+    return due;
   }
 
   function showError(message) {

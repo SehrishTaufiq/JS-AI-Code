@@ -37,9 +37,23 @@ main {
 
 h1 { margin: 0 0 20px; font-size: 28px; }
 
-form { display: flex; gap: 8px; }
+form { display: grid; gap: 8px; }
 
-input[type="text"] {
+.row { display: flex; gap: 8px; }
+
+.details { flex-wrap: wrap; }
+
+.details label, .tag-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.details .grow { flex: 1; min-width: 180px; }
+
+input[type="text"], input[type="date"], select {
   flex: 1;
   min-width: 0;
   padding: 10px 12px;
@@ -64,7 +78,50 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-#task-list { list-style: none; padding: 0; margin: 20px 0 0; }
+input[type="date"], select { flex: 0 1 auto; padding: 8px 10px; }
+
+select:disabled { opacity: 0.6; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.segmented {
+  display: inline-flex;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.segmented label { position: relative; }
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.segmented span {
+  display: block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.segmented input:checked + span { background: var(--accent); color: #fff; }
+
+.segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#task-list { list-style: none; padding: 0; margin: 16px 0 0; }
 
 .task {
   display: flex;
@@ -79,9 +136,35 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .task input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
 
-.task label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
+.task .body { flex: 1; min-width: 0; }
+
+.task label { display: block; overflow-wrap: anywhere; cursor: pointer; }
 
 .task.done label { text-decoration: line-through; color: var(--muted); }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.due { color: var(--muted); }
+
+.due.overdue { color: var(--danger); font-weight: 600; }
+
+.task .tag {
+  padding: 2px 8px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--accent);
+}
+
+.task .tag:hover { border-color: var(--accent); }
 
 .task .delete {
   padding: 6px 10px;

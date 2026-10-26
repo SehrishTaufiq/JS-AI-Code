@@ -11,15 +11,42 @@
     <h1>Todo</h1>
 
     <form id="new-task-form" autocomplete="off">
-      <label for="new-task-title" class="visually-hidden">New task</label>
-      <input id="new-task-title" name="title" type="text" placeholder="What needs doing?" maxlength="200" required>
-      <button type="submit">Add</button>
+      <div class="row">
+        <label for="new-task-title" class="visually-hidden">New task</label>
+        <input id="new-task-title" name="title" type="text" placeholder="What needs doing?" maxlength="200" required>
+        <button type="submit">Add</button>
+      </div>
+      <div class="row details">
+        <label>
+          <span>Due date</span>
+          <input id="new-task-due" name="dueDate" type="date">
+        </label>
+        <label class="grow">
+          <span>Tags</span>
+          <input id="new-task-tags" name="tags" type="text" placeholder="work, home" maxlength="200">
+        </label>
+      </div>
     </form>
 
     <p id="error" class="error" role="alert" hidden></p>
 
+    <section class="filters" aria-label="Filters">
+      <fieldset id="status-filter" class="segmented">
+        <legend class="visually-hidden">Show</legend>
+        <label><input type="radio" name="status" value="all" checked><span>All</span></label>
+        <label><input type="radio" name="status" value="incomplete"><span>Incomplete</span></label>
+        <label><input type="radio" name="status" value="completed"><span>Completed</span></label>
+      </fieldset>
+      <label class="tag-filter">
+        <span>Tag</span>
+        <select id="tag-filter">
+          <option value="">All tags</option>
+        </select>
+      </label>
+    </section>
+
     <ul id="task-list" aria-label="Tasks"></ul>
-    <p id="empty-state" class="empty" hidden>No tasks yet. Add one above.</p>
+    <p id="empty-state" class="empty" hidden></p>
     <p id="task-count" class="count" aria-live="polite"></p>
   </main>
 

@@ -37,4 +37,4 @@ Never copy project details up into this file. Link to them from the index instea
 | Folder | What it is | Tickets | Details |
 |---|---|---|---|
 | [`research/`](research/README.md) | Answers to question tickets, with sources | #1 | [README](research/README.md) |
-| [`todo/`](todo/README.md) | Browser todo app with IndexedDB storage | #3 | [README](todo/README.md) |
+| [`todo/`](todo/README.md) | Browser todo app: IndexedDB storage, filters, due dates, tags | #3, #4 | [README](todo/README.md) |
