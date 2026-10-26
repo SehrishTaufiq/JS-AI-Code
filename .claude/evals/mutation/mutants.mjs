@@ -88,4 +88,9 @@ export const MUTANTS = [
   { id: 'F02', file: '.claude/skills/factory-loop/scripts/fetch-tickets.mjs', bug: "the loop's own replies counted as review feedback", from: 'const human = all.filter((i) => !i.body.includes(MARKER) && ', to: 'const human = all.filter((i) => ', suites: ['fetch'], covers: ['F2'] },
   { id: 'F03', file: '.claude/skills/factory-loop/scripts/github.mjs', bug: 'marker added twice on PR updates', from: 'return text.includes(MARKER) ? text :', to: 'return false ? text :', suites: ['github'], covers: ['F3'] },
   { id: 'F04', file: '.claude/skills/factory-loop/scripts/github.mjs', bug: "pr-feedback returns the loop's own posts", from: "].filter((i) => !(i.body || '').includes(MARKER))", to: '].filter((i) => true)', suites: ['github'], covers: ['F2'] },
+
+  // --- browser console + network logs (todo/e2e/fixtures.mjs): the page still looks fine ---
+  { id: 'N01', file: 'todo/app.js', bug: 'uncaught error after start-up (page still works)', from: '\n})();', to: "\n  setTimeout(() => { throw new Error('late failure'); });\n})();", suites: ['e2e'], covers: ['S10'] },
+  { id: 'N02', file: 'todo/app.js', bug: 'app phones home (tracking pixel)', from: '\n})();', to: "\n  new Image().src = 'https://tracker.example/p.gif';\n})();", suites: ['e2e'], covers: ['S10'] },
+  { id: 'N03', file: 'todo/index.html', bug: 'links a file that does not exist', from: '<link rel="stylesheet" href="styles.css">', to: '<link rel="stylesheet" href="styles.css">\n  <link rel="icon" href="favicon.ico">', suites: ['e2e'], covers: ['S10'] },
 ];

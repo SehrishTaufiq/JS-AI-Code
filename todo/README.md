@@ -22,6 +22,8 @@ dates, leap years, month ends), recurrence, filtering, and upgrading old or junk
 
 **Browser tests** (`e2e/`, see the `e2e-test` skill) drive the real page over `file://`. They
 cover every feature and persistence after reload, plus:
+- in every test, a clean browser console and no network requests outside this folder
+  (`e2e/fixtures.mjs`; the log is attached to the Playwright report as `browser-log.txt`);
 - HTML injection shown as text, and the Content-Security-Policy blocking injected scripts;
 - old stored records loading; two open tabs staying in sync; no IndexedDB available; a newer
   version opened in another tab;

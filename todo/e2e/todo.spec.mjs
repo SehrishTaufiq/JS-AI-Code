@@ -1,6 +1,7 @@
 // End-to-end tests for the todo app, run against index.html over file:// like a real user opens it.
-// Each test gets a fresh browser context, so IndexedDB starts empty.
-import { test, expect } from '@playwright/test';
+// Each test gets a fresh browser context, so IndexedDB starts empty. Every test also fails on
+// console errors and on network requests outside the app folder (fixtures.mjs).
+import { test, expect, APP_DIR } from './fixtures.mjs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -269,7 +270,10 @@ test.describe('data and storage', () => {
   });
 });
 
-test.describe('security and accessibility', () => {
+test.describe('security: CSP', () => {
+  // Chrome logs the blocked script as a console error; that error is the expected outcome here.
+  test.use({ allowConsole: [/Content Security Policy/] });
+
   test('Content-Security-Policy blocks injected inline scripts', async ({ page }) => {
     await open(page);
     const ran = await page.evaluate(async () => {
@@ -280,6 +284,19 @@ test.describe('security and accessibility', () => {
       return window.__pwned === true;
     });
     expect(ran).toBe(false);
+  });
+});
+
+test.describe('security and accessibility', () => {
+  test('loads only its own files and logs no errors', async ({ page, browserLog }) => {
+    await open(page);
+    await add(page, 'Logged', { due: '2026-10-30', tags: 'net', repeat: 'weekly' });
+    await item(page, 'Logged').first().getByRole('checkbox').check();
+    await page.reload();
+    await expect(item(page, 'Logged')).toHaveCount(2);
+    const files = new Set(browserLog.requests.map((url) => url.slice(APP_DIR.length)));
+    expect([...files].sort()).toEqual(['app.js', 'db.js', 'index.html', 'styles.css', 'tasks.js']);
+    expect(browserLog.problems).toEqual([]);
   });
 
   test('every control has an accessible name', async ({ page }) => {

@@ -17,8 +17,10 @@ transcripts, and this repo is public).
 **Mutation testing.** Copies the code to a temp folder (the repo is never touched), checks the
 suites pass there, then plants one bug at a time (e.g. "weekly repeat is 6 days", "`rm -rf`
 allowed", "tickets from strangers get built") and runs the suites that should catch it.
-*Killed* = a test failed, good. *Survived* = a gap in the tests. 70 mutants across `tasks.js`,
+*Killed* = a test failed, good. *Survived* = a gap in the tests. 73 mutants across `tasks.js`,
 `app.js`, `index.html`, the guard, secret masking, both Stop hooks and the factory scripts.
+N01-N03 are bugs only the browser console/network logs reveal (a late uncaught error, a tracking
+pixel, a missing file); the page still looks fine with each of them.
 
 **Requirements matrix.** Each requirement from tickets #1-#5 and each security rule (S1-S9) lists
 the tests that cover it. The checker confirms those tests still exist and joins in the mutation
@@ -57,6 +59,7 @@ that: no sandbox commits, branches unchanged, no tool call touching the real rep
 | Mutation | Re-introducing the "fast second entry wiped by a pending save" race went unnoticed | Fixed: new Playwright test with a slowed-down save |
 | Mutation | A destructive command on the *first* of several lines was untested in the guard | Fixed: new guard table row |
 | Requirements | Tickets #1 and #2 (research answer, CLAUDE.md rules) had no tests | Fixed: `.claude/tests/repo-rules.test.mjs` |
+| Mutation | Console errors, outside requests and missing files went unnoticed (N01-N03 survived) | Fixed: `todo/e2e/fixtures.mjs` checks console + network in every browser test; requirement S10 |
 | Triggers | "check feedback on my PRs" and "push ... and open the PR" did not start the skill; the model gave up when it saw no GitHub tool | Fixed: skill description names both and says it brings its own GitHub scripts |
 | Scenario 3 | **The loop can't save PR/comment drafts unattended**: Claude Code treats `.git/` as protected, so writing `.git/factory-loop/*.md` is refused in headless and `/loop` runs. The agent reported it and did not work around it | **Needs you**: move the state dir out of `.git/` (e.g. `.claude/state/`, gitignored) in `scripts/lib.mjs` and `.gitignore`, both guardrail files |
 | Scenario 3, run 1 | Given a ticket whose committed work didn't do what it asked, the agent refused to open a PR that would close it, and asked questions instead | Good behaviour. The fixture was wrong and was fixed; the result is kept as evidence |

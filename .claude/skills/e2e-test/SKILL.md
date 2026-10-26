@@ -22,6 +22,10 @@ repeatable, run in CI on every PR.
 
 ## Conventions
 
+- **Import `test`/`expect` from `./fixtures.mjs`**, not `@playwright/test`. Every test then
+  records the console and network (`browser-log.txt` in the report) and fails on console errors,
+  uncaught exceptions, failed loads or requests outside the app folder. A test that causes an
+  error on purpose allows it with `test.use({ allowConsole: [/pattern/] })` in its own `describe`.
 - **Open the app the way users do:** `page.goto(pathToFileURL('<project>/index.html').href)`.
   Every test gets a fresh browser context, so IndexedDB starts empty. Never share state between tests.
 - **Drive the real UI** (fill, press Enter, click, check), not internal functions. Use
