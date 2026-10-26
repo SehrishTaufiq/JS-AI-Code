@@ -6,7 +6,9 @@ ticket asked for in a real browser, the way a user would, before calling it done
 ## Setup
 
 - Use the Chrome DevTools MCP tools (`mcp__plugin_chrome-devtools-mcp_chrome-devtools__*`). If they
-  are deferred, load them with ToolSearch first. The claude-in-chrome tools work too.
+  are deferred, load them with ToolSearch first. Prefer them over claude-in-chrome. That one drives
+  the user's real browser profile, so test data would land in their own storage. If it is the
+  only option, use a fresh tab and delete only the test records you created.
 - Open the page with `new_page` at `file:///<absolute path>/index.html` and an `isolatedContext`
   name (e.g. `factory-qa`). That gives clean storage that does not touch the user's own browser
   profile, and the data survives reloads within that context, which you need for persistence checks.

@@ -3,13 +3,20 @@
 // whether a local commit already says "Closes #N" and whether that commit is pushed.
 // Needs only Node 18+ and git; no gh CLI.
 //
-// Usage: node fetch-tickets.mjs [--state all|open|closed] [--json]
-// Set GITHUB_TOKEN or GH_TOKEN for private repos or higher rate limits.
+// Usage: node fetch-tickets.mjs [--state all|open|closed] [--json] [--no-fetch]
+// Set GITHUB_TOKEN or GH_TOKEN for private repos or higher rate limits (60/h without, 5000/h with).
+//
+// Runs `git fetch` first so "pushed" is current, and caches API responses by ETag in .git/
+// (never committed): unchanged issue lists come back as 304s, which GitHub does not count
+// against the rate limit, so polling every minute with /loop stays within it.
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const args = process.argv.slice(2);
 const state = valueOf('--state') ?? 'all';
 const asJson = args.includes('--json');
+const noFetch = args.includes('--no-fetch');
 
 function valueOf(flag) {
   const i = args.indexOf(flag);
@@ -34,22 +41,49 @@ function repoSlug() {
   return `${m[1]}/${m[2]}`;
 }
 
+const cacheFile = (() => {
+  const p = git('rev-parse', '--git-path', 'factory-loop-cache.json');
+  return p ? path.resolve(p) : null;
+})();
+
+function readCache() {
+  try {
+    return JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
 async function fetchIssues(slug) {
   const headers = { 'User-Agent': 'factory-loop', Accept: 'application/vnd.github+json' };
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (token) headers.Authorization = `Bearer ${token}`;
+  const cache = readCache();
   const issues = [];
   for (let page = 1; ; page++) {
     const url = `https://api.github.com/repos/${slug}/issues?state=${state}&per_page=100&page=${page}&sort=created&direction=asc`;
-    const res = await fetch(url, { headers });
-    if (!res.ok) {
+    const cached = cache[url];
+    const res = await fetch(url, { headers: cached ? { ...headers, 'If-None-Match': cached.etag } : headers });
+    let batch;
+    if (res.status === 304 && cached) {
+      batch = cached.body;
+    } else if (res.ok) {
+      batch = await res.json();
+      if (res.headers.get('etag')) cache[url] = { etag: res.headers.get('etag'), body: batch };
+    } else {
       console.error(`GitHub API ${res.status} for ${slug}: ${(await res.text()).slice(0, 300)}`);
       if (res.status === 404 && !token) console.error('Private repo? Set GITHUB_TOKEN or GH_TOKEN.');
+      if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') {
+        const reset = new Date(Number(res.headers.get('x-ratelimit-reset')) * 1000);
+        console.error(`Rate limited until ${reset.toLocaleTimeString()}. Set GITHUB_TOKEN for 5000 requests/hour.`);
+      }
       process.exit(1);
     }
-    const batch = await res.json();
     issues.push(...batch.filter((i) => !i.pull_request)); // the issues API also returns PRs
-    if (batch.length < 100) return issues;
+    if (batch.length < 100) {
+      if (cacheFile) fs.writeFileSync(cacheFile, JSON.stringify(cache));
+      return issues;
+    }
   }
 }
 
@@ -70,6 +104,17 @@ function action(issue, local) {
 }
 
 const slug = repoSlug();
+if (!noFetch) {
+  try {
+    execFileSync('git', ['fetch', '-q', 'origin'], {
+      stdio: 'ignore',
+      timeout: 30_000,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' },
+    });
+  } catch {
+    console.error('warning: git fetch failed; "pushed" status may be stale');
+  }
+}
 const issues = await fetchIssues(slug);
 const tickets = issues.map((i) => {
   const local = localStatus(i.number);
