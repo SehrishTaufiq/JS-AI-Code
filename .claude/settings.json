@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git push --delete *)",
+      "Bash(git push * --delete *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git clean -d*)",
+      "Bash(git branch -D *)",
+      "Bash(git checkout -- *)",
+      "Bash(git filter-branch *)",
+      "Bash(gh repo delete *)",
+      "Bash(gh issue delete *)",
+      "Bash(gh release delete *)",
+      "PowerShell(Remove-Item * -Recurse*)",
+      "PowerShell(rm -r *)",
+      "PowerShell(rm -rf *)"
+    ],
+    "ask": [
+      "Bash(rm *)",
+      "Bash(git rebase *)",
+      "Bash(git commit --amend*)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(rm *)",
+      "PowerShell(del *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-prompts.mjs\"; node \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.mjs\"",
+            "timeout": 120,
+            "statusMessage": "Logging prompts, committing and pushing..."
+          }
+        ]
+      }
+    ]
+  }
+}

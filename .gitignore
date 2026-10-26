@@ -1,0 +1,21 @@
+# Secrets: never commit (the auto-commit hook also refuses these)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
