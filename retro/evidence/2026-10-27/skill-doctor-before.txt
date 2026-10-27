@@ -1,0 +1,68 @@
+Skills loaded this session
+
+  skill                                            source               context  7d tokens   uses  last used
+  ticket-screen                                    projectSettings         ~170          -     0×  never
+  claude-security:scan                             claude-security         ~150          -     0×  never
+  code-review:code-review                          code-review             < 20          -     0×  never
+  ralph-loop:cancel-ralph                          ralph-loop              < 20          -     0×  never
+  ralph-loop:ralph-loop                            ralph-loop               ~20          -     0×  never
+  hookify:configure                                hookify                  ~20          -     0×  never
+  hookify:help                                     hookify                 < 20          -     0×  never
+  hookify:hookify                                  hookify                  ~40          -     0×  never
+  hookify:list                                     hookify                 < 20          -     0×  never
+  chrome-devtools-mcp:a11y-debugging               chrome-devtools-mcp      ~80          -     0×  never
+  chrome-devtools-mcp:chrome-devtools-cli          chrome-devtools-mcp      ~60          -     0×  never
+  chrome-devtools-mcp:cookie-debugging             chrome-devtools-mcp     ~130          -     0×  never
+  chrome-devtools-mcp:memory-leak-debugging        chrome-devtools-mcp      ~90          -     0×  never
+  superpowers:diagnosing-superpowers               superpowers             ~140          -     0×  never
+  superpowers:dispatching-parallel-agents          superpowers              ~50          -     0×  never
+  superpowers:receiving-code-review                superpowers              ~90          -     0×  never
+  superpowers:using-git-worktrees                  superpowers              ~80          -     0×  never
+  hookify:writing-rules                            hookify                  ~80          -     0×  never
+  claude-security:claude-security                  claude-security            -          -     0×  never
+  anthropic-skills:docx                            claude.ai sync          ~320          -     0×  never
+  anthropic-skills:google-workspace                claude.ai sync          ~330          -     0×  never
+  anthropic-skills:import-memory                   claude.ai sync           ~60          -     0×  never
+  anthropic-skills:morning                         claude.ai sync          ~120          -     0×  never
+  anthropic-skills:pdf                             claude.ai sync          ~150          -     0×  never
+  anthropic-skills:pptx                            claude.ai sync          ~330          -     0×  never
+  anthropic-skills:skill-creator                   claude.ai sync          ~120          -     0×  never
+  superpowers:verification-before-completion       superpowers              ~90          -     1×  165 days
+  ralph-loop:help                                  ralph-loop               ~20          -     1×  155 days
+  superpowers:using-superpowers                    superpowers              ~60          -     3×  155 days
+  superpowers:requesting-code-review               superpowers              ~50          -     1×  123 days
+  superpowers:test-driven-development              superpowers              ~40          -     8×  123 days
+  superpowers:executing-plans                      superpowers              ~70          -     2×  105 days
+  chrome-devtools-mcp:troubleshooting              chrome-devtools-mcp      ~80          -     1×  40 days
+  brainstorming                                    userSettings             ~70          -     7×  33 days
+  superpowers:finishing-a-development-branch       superpowers              ~50          -     7×  33 days
+  superpowers:subagent-driven-development          superpowers              ~40          -    10×  33 days
+  superpowers:writing-plans                        superpowers              ~40          -     8×  33 days
+  chrome-devtools-mcp:debug-optimize-lcp           chrome-devtools-mcp     ~160          -     1×  29 days
+  superpowers:brainstorming                        superpowers              ~80          -    27×  22 days
+  chrome-devtools-mcp:chrome-devtools              chrome-devtools-mcp     ~110          -    15×  21 days
+  support-article-author                           userSettings            ~210          -     1×  17 days
+  support-article-validator                        userSettings            ~190          -     1×  17 days
+  bug-hunter                                       userSettings            ~150          -     2×  16 days
+  anthropic-skills:docs                            claude.ai sync          ~340          -     2×  16 days
+  superpowers:writing-skills                       superpowers              ~40          -     3×  15 days
+  anthropic-skills:xlsx                            claude.ai sync          ~320       2.5m     3×  6 days
+  superpowers:systematic-debugging                 superpowers              ~40       3.4m    24×  5 days
+  e2e-test                                         projectSettings         ~160     204.9k     3×  today
+  factory-loop                                     projectSettings          ~30       1.1m     9×  today
+  skill-creator:skill-creator                      skill-creator           ~120     724.4k     5×  today
+  claude-code-setup:claude-automation-recommender  claude-code-setup       ~140       1.2m     3×  today
+
+  context = this skill's one-line listing in the system prompt, included every turn
+  (dash = not in the current listing, costs nothing; full SKILL.md loads only when it runs)
+  7d tokens = tokens attributed to the skill over the last 7 days of sessions on this machine
+
+1 skill loaded but never invoked. Each one adds to the system prompt every turn. Disable in /skills, or remove from .claude/skills.
+7 skills synced from claude.ai loaded but never invoked. Each one adds to the system prompt every turn. Disable in /skills, or turn them off on claude.ai — a deleted synced copy is re-downloaded on the next sync.
+7 plugin skills loaded but never invoked, from claude-security, code-review, hookify. Each one adds to the system prompt every turn. Plugin skills can't be turned off individually — disable those plugins in /plugin.
+
+Plugins not used recently
+
+  code-review  last used 139 days ago
+
+  Manage these in /plugin
