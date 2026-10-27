@@ -34,6 +34,7 @@ export async function startFakeGitHub(state) {
       const page = Number(url.searchParams.get('page') || 1);
       const paged = (list) => (page === 1 ? list : []);
       let m;
+      if (req.method === 'GET' && route === '') return send(200, state.repo || { full_name: `${parts[1]}/${parts[2]}`, permissions: { push: true } });
       if (req.method === 'GET' && route === 'issues') return send(200, paged(state.issues));
       if (req.method === 'GET' && (m = route.match(/^issues\/(\d+)$/))) {
         const found = state.issues.find((i) => i.number === Number(m[1]));
