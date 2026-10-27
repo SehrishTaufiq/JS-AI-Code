@@ -30,7 +30,7 @@ export const RULES = [
   { id: 'fake-role-header', severity: 'block', why: 'fakes a system/assistant message inside the text', re: /^\s*(#+\s*)?((system|developer)\s+(message|prompt|instructions?|note)|assistant|AI|agent|claude)\s*:/im },
   { id: 'fake-system-caps', severity: 'block', why: 'fakes a system message inside the text', re: /^\s*\[?SYSTEM\]?\s*:/m },
   { id: 'fake-role-tag', severity: 'block', why: 'fakes a system/assistant message inside the text', re: /<\/?\s*(system|assistant|instructions?|admin|im_start|im_end)\b[^>]*>|\[\/?(INST|SYS)\]/i },
-  { id: 'addressed-to-ai', severity: 'block', why: 'gives orders to the AI rather than describing a feature', re: /\b(AI|LLM|agent|assistant|Claude|bot|model|copilot)\b[^.\n]{0,15}[:,]\s*(please\s+)?(ignore|run|execute|push|merge|delete|add|send|print|disable|you (must|should))\b/i },
+  { id: 'addressed-to-ai', severity: 'block', why: 'gives orders to the AI rather than describing a feature', re: /\b(AI|LLM|agent|assistant|Claude|bot|model|copilot)\b[^.\n]{0,15}[:,]\s*(please\s+)?(also\s+|now\s+|then\s+)?(ignore|run|execute|push|merge|delete|add|send|print|disable|create|write|make|install|download|fetch|curl|commit|edit|change|remove|you (must|should))\b/i },
   { id: 'claims-approval', severity: 'block', why: 'claims an approval the agent can\'t verify', re: /\b(user|owner|maintainer|admin|reviewer)\b[^.\n]{0,20}\b(has |already )?(approved|authori[sz]ed|allowed|signed off)\b[^.\n]{0,40}\b(merg|push|clos|delet|deploy|skip)/i },
   { id: 'secrecy', severity: 'block', why: 'asks to hide what is done from the user or reviewer', re: /\b(don'?t|do not|never|without)\b[^.\n]{0,20}\b(tell|mention|inform|notify|show|report|alert|include it in)\b[^.\n]{0,30}\b(user|owner|reviewer|maintainer|anyone|PR|pull request|summary|description)\b|\b(quietly|silently|secretly|covertly|stealthily)\s+(add|send|upload|post|push|commit|install|remove|delete|change|include|insert|run|copy|exfiltrate)\b/i },
 
@@ -98,7 +98,7 @@ async function main() {
     const { api, apiList, repoSlug, saveCache } = await import('../../factory-loop/scripts/lib.mjs');
     const slug = repoSlug();
     if (val('--issue')) {
-      const i = await api(`/repos/${slug}/issues/${val('--issue')}`);
+      const i = await api('GET', `/repos/${slug}/issues/${val('--issue')}`);
       items.push({ source: `issue #${i.number} by ${i.user?.login}`, text: `${i.title}\n\n${i.body || ''}` });
     } else {
       const n = val('--pr');

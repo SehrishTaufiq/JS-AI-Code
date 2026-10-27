@@ -35,6 +35,10 @@ export async function startFakeGitHub(state) {
       const paged = (list) => (page === 1 ? list : []);
       let m;
       if (req.method === 'GET' && route === 'issues') return send(200, paged(state.issues));
+      if (req.method === 'GET' && (m = route.match(/^issues\/(\d+)$/))) {
+        const found = state.issues.find((i) => i.number === Number(m[1]));
+        return found ? send(200, found) : send(404, { message: 'Not Found' }, false);
+      }
       if (req.method === 'GET' && route === 'pulls') {
         let list = state.pulls;
         const head = url.searchParams.get('head');
