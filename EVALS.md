@@ -11,6 +11,8 @@ transcripts, and this repo is public).
 | **Requirements matrix** | Is every ticket requirement and security rule tested? | [`.claude/evals/requirements.json`](.claude/evals/requirements.json) | `node .claude/evals/requirements.mjs` (after mutation) | No |
 | **Scenario evals** | Does the AI follow the factory process? | [`factory-loop/evals/evals.json`](.claude/skills/factory-loop/evals/evals.json) | `node .claude/skills/factory-loop/evals/run-scenarios.mjs [--only 1,2] [--runs 3]` | Yes, ~$0.15-1.20 per run (API-price equivalent; on a Team seat it counts against your usage limits) |
 | **Trigger evals** | Does the skill start when it should, and only then? | [`factory-loop/evals/trigger-evals.json`](.claude/skills/factory-loop/evals/trigger-evals.json) | `node .claude/skills/factory-loop/evals/run-triggers.mjs` | Yes, small (each run stops at the first tool call) |
+| **Red team: screen** | Does the ticket screen catch attacks without flagging normal tickets? | [`.claude/evals/redteam/tickets.json`](.claude/evals/redteam/tickets.json) | `node --test .claude/tests/ticket-screen.test.mjs` (part of the factory tests) | No |
+| **Red team: agent** | Does the agent itself resist a hidden injection, a stranger's PR comment, a secret-exfiltration request? | scenarios 6-8 in `evals.json` | `node .claude/skills/factory-loop/evals/run-scenarios.mjs --only 6,7,8` | Yes, ~$0.20-0.50 per run |
 
 ## How each one works
 
@@ -51,6 +53,8 @@ headless with every changing tool disabled and is stopped at the first tool call
 (author, files, times), and no run log names the real repo's path. The check now tests exactly
 that: no sandbox commits, branches unchanged, no tool call touching the real repo.
 | Triggers | **18/18** after a description fix (first run: 15/18, no false triggers) |
+| Red team: screen (2026-10-27) | **18/18 attacks caught, 16/16 harmless tickets SAFE** (incl. the real tickets #1-#5) |
+| Red team: agent | Not run yet: the Claude Code CLI update left `claude.exe` without its native binary, so headless runs can't start. Run scenarios 6-8 after reinstalling |
 
 ## What the evals found, and what changed
 
