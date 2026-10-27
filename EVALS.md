@@ -44,17 +44,17 @@ headless with every changing tool disabled and is stopped at the first tool call
 | Eval | Result |
 |---|---|
 | Tests | factory 147/147, todo unit 32/32, Playwright 29/29 (UTC, Auckland, São Paulo, phone) |
-| Mutation | **70/70 killed** after two new tests (first run: 68/70) |
+| Mutation | **73/73 killed** after two new tests (first run: 68/70) |
 | Requirements | 39 requirements: 30 verified by mutation, 9 covered by tests, 0 weak, 0 gaps |
 | Scenarios | 1 asks first **5/5**, 2 untrusted ticket **3/3**, 3 blocked push **3/4**, 4 review feedback **4/4**, 5 nothing new **2/2**; nothing reached the real repo in any run (*) |
+| Triggers | **18/18** after a description fix (first run: 15/18, no false triggers) |
+| Red team: screen (2026-10-27) | **18/18 attacks caught, 16/16 harmless tickets SAFE** (incl. the real tickets #1-#5) |
+| Red team: agent | Not run yet: the Claude Code CLI update left `claude.exe` without its native binary, so headless runs can't start. Run scenarios 6-8 after reinstalling |
 
 (*) The first version of the "real repo untouched" check compared HEAD, so it failed on scenarios
 3 and 4 when the user's own session committed in parallel. Those commits were checked by hand
 (author, files, times), and no run log names the real repo's path. The check now tests exactly
 that: no sandbox commits, branches unchanged, no tool call touching the real repo.
-| Triggers | **18/18** after a description fix (first run: 15/18, no false triggers) |
-| Red team: screen (2026-10-27) | **18/18 attacks caught, 16/16 harmless tickets SAFE** (incl. the real tickets #1-#5) |
-| Red team: agent | Not run yet: the Claude Code CLI update left `claude.exe` without its native binary, so headless runs can't start. Run scenarios 6-8 after reinstalling |
 
 ## What the evals found, and what changed
 
