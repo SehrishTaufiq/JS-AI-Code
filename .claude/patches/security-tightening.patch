@@ -441,6 +441,31 @@ index 19d504f..0a85177 100644
        }
      ],
      "Stop": [
+diff --git a/.claude/skills/factory-loop/SKILL.md b/.claude/skills/factory-loop/SKILL.md
+index 3823e73..e04a129 100644
+--- a/.claude/skills/factory-loop/SKILL.md
++++ b/.claude/skills/factory-loop/SKILL.md
+@@ -189,6 +189,9 @@ subagent the ticket text, the branch and its base. On `VERDICT: BLOCK`, fix the
+ re-run it. If a finding can't be fixed within the ticket, don't push: report it. Put its verdict in
+ the PR's Verification section.
+ 
++**Check push access first**, once per run: `github.mjs access`. Exit 4 means GitHub will refuse
++(read-only account, no token, 403): skip steps 1, 4 and 5, save both drafts, and report.
++
+ Then, in this order (the screenshot links are pinned to the commit at `HEAD`, so generate them
+ after the last commit and push):
+ 
+@@ -206,6 +209,10 @@ after the last commit and push):
+ 
+ (`github.mjs` = `node .claude/skills/factory-loop/scripts/github.mjs`.)
+ 
++Write every file in `.git/factory-loop/` (PR body, ticket comment, `ticket-N.md` notes) with
++`github.mjs draft --name <file> <<'EOF' … EOF`, not the Write tool: Claude Code refuses tool writes
++inside `.git/`, which left unattended runs without drafts.
++
+ **If GitHub refuses** (no token: exit 3; push 403; API 403/404): still write both drafts, then
+ stop. Don't retry in a loop or touch credentials. Everything stays ready locally. Report the
+ exact error and the fix (a token with write access via `GITHUB_TOKEN`/`gh auth login`, or push
 diff --git a/.claude/skills/factory-loop/scripts/fetch-tickets.mjs b/.claude/skills/factory-loop/scripts/fetch-tickets.mjs
 index 9c4a34a..7bf1d28 100644
 --- a/.claude/skills/factory-loop/scripts/fetch-tickets.mjs
@@ -534,20 +559,28 @@ index 9c4a34a..7bf1d28 100644
  }
  saveCache();
 diff --git a/.claude/skills/factory-loop/scripts/github.mjs b/.claude/skills/factory-loop/scripts/github.mjs
-index 2f68331..dd298f0 100644
+index 2f68331..4f532b1 100644
 --- a/.claude/skills/factory-loop/scripts/github.mjs
 +++ b/.claude/skills/factory-loop/scripts/github.mjs
-@@ -12,7 +12,8 @@
+@@ -7,12 +7,16 @@
+ //   node github.mjs comment     --issue <number> --body-file <file> [--dry-run]
+ //   node github.mjs pr-feedback --pr <number>
+ //   node github.mjs image-md    --dir <screenshot dir> [--ref <commit sha>]
++//   node github.mjs access                      # exit 4 if GitHub will refuse a push
++//   node github.mjs draft       --name <pr-…|comment-N|ticket-N>.md   < text   # save into .git/factory-loop/
+ //
+ // Token: GITHUB_TOKEN / GH_TOKEN, or `gh auth token`. Bodies get a hidden marker so the loop can
  // tell its own posts from review feedback.
++import { spawnSync } from 'node:child_process';
  import fs from 'node:fs';
  import path from 'node:path';
 -import { api, apiList, arg, git, MARKER, repoSlug, saveCache } from './lib.mjs';
 +import { screen } from '../../ticket-screen/scripts/screen.mjs';
-+import { api, apiList, arg, factoryConfig, git, MARKER, repoSlug, saveCache } from './lib.mjs';
++import { api, apiList, arg, factoryConfig, git, MARKER, quietEnv, repoSlug, saveCache, stateDir, token } from './lib.mjs';
  
  const [cmd, ...args] = process.argv.slice(2);
  const dryRun = args.includes('--dry-run');
-@@ -69,7 +70,8 @@ async function comment() {
+@@ -69,7 +73,8 @@ async function comment() {
  }
  
  // Human feedback on a PR, oldest first: reviews, inline review comments and conversation
@@ -557,7 +590,7 @@ index 2f68331..dd298f0 100644
  async function prFeedback() {
    const pr = need('--pr');
    const [reviews, inline, convo] = await Promise.all([
-@@ -82,8 +84,18 @@ async function prFeedback() {
+@@ -82,8 +87,18 @@ async function prFeedback() {
      ...inline.map((c) => ({ at: c.created_at, who: c.user?.login, kind: `inline ${c.path}:${c.line ?? c.original_line ?? '?'}`, body: c.body })),
      ...convo.map((c) => ({ at: c.created_at, who: c.user?.login, kind: 'comment', body: c.body })),
    ].filter((i) => !(i.body || '').includes(MARKER)).sort((a, b) => a.at.localeCompare(b.at));
@@ -578,6 +611,49 @@ index 2f68331..dd298f0 100644
  }
  
  // Markdown image list for the PNGs in a directory, pinned to a commit so links survive the
+@@ -104,7 +119,41 @@ function imageMd() {
+   }
+ }
+ 
+-const commands = { 'pr-create': prCreate, comment, 'pr-feedback': prFeedback, 'image-md': imageMd };
++// Can this account push here? Checked once before the first push, so a read-only account (403)
++// is found before the work is pushed, not after. Exit 4 = GitHub will refuse.
++async function access() {
++  let apiPush = null;
++  try {
++    const repo = await api('GET', `/repos/${slug}`);
++    if (repo?.permissions) apiPush = !!repo.permissions.push;
++  } catch {}
++  const branch = git('rev-parse', '--abbrev-ref', 'HEAD') || 'HEAD';
++  const dry = spawnSync('git', ['push', '--dry-run', '--porcelain', 'origin', `HEAD:refs/heads/${branch}`], { encoding: 'utf8', env: quietEnv, timeout: 30_000 });
++  const gitPush = dry.status === 0;
++  console.log(`token: ${token() ? 'yes' : 'no'}; API push permission: ${apiPush ?? 'unknown (no token)'}; git push (dry run): ${gitPush ? 'ok' : 'refused'}`);
++  if (!gitPush) console.log(String(dry.stderr || '').trim().split('\n').slice(-2).join('\n'));
++  process.exit(gitPush && apiPush !== false ? 0 : 4);
++}
++
++// Drafts and ticket notes live in .git/factory-loop/, where Claude Code's Write tool may not
++// write; this saves stdin there under a draft name (nothing else, so it can't touch other files).
++function draft() {
++  const name = need('--name');
++  if (!/^(pr-[\w.-]+|comment-\d+|ticket-\d+)\.md$/.test(name) || name.includes('..')) {
++    console.error('draft names: pr-<branch-with-dashes>.md, comment-<N>.md, ticket-<N>.md');
++    process.exit(2);
++  }
++  const text = fs.readFileSync(0, 'utf8');
++  if (!text.trim()) {
++    console.error('empty draft: pipe the text on stdin');
++    process.exit(2);
++  }
++  const file = path.join(stateDir(), name);
++  fs.writeFileSync(file, text);
++  console.log(`saved ${file}`);
++}
++
++const commands = { 'pr-create': prCreate, comment, 'pr-feedback': prFeedback, 'image-md': imageMd, access, draft };
+ if (!commands[cmd]) {
+   console.error(`usage: github.mjs <${Object.keys(commands).join('|')}> ...`);
+   process.exit(2);
 diff --git a/.claude/tests/fetch-tickets-screen.test.mjs b/.claude/tests/fetch-tickets-screen.test.mjs
 new file mode 100644
 index 0000000..500600c
@@ -656,6 +732,68 @@ index fb0d1a5..7d857a7 100644
          { created_at: '2099-01-02T00:00:00Z', body: `Fixed in abc ${MARKER}` },
        ],
      },
+diff --git a/.claude/tests/github-access-draft.test.mjs b/.claude/tests/github-access-draft.test.mjs
+new file mode 100644
+index 0000000..5b6ec94
+--- /dev/null
++++ b/.claude/tests/github-access-draft.test.mjs
+@@ -0,0 +1,56 @@
++// github.mjs access (check push access before pushing) and draft (save drafts into the state
++// folder from stdin, since Claude Code's Write tool refuses paths inside .git/).
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { spawn } from 'node:child_process';
++import fs from 'node:fs';
++import path from 'node:path';
++import { makeRepo, runScript, SCRIPTS } from './helpers.mjs';
++import { startFakeGitHub } from './fake-github.mjs';
++
++const state = (repo) => ({ issues: [], pulls: [], reviews: {}, inline: {}, comments: {}, repo });
++
++test('access: exit 0 when the dry-run push works and the API allows push', async () => {
++  const r = makeRepo({ githubSlug: 'o/r' });
++  const gh = await startFakeGitHub(state({ permissions: { push: true } }));
++  try {
++    const res = await runScript('github.mjs', ['access'], { cwd: r.work, env: { FACTORY_API_BASE: gh.base, GITHUB_TOKEN: 'test-token' } });
++    assert.equal(res.code, 0, res.stdout + res.stderr);
++    assert.match(res.stdout, /API push permission: true; git push \(dry run\): ok/);
++  } finally {
++    await gh.close();
++  }
++});
++
++test('access: exit 4 when the account is read-only, before anything is pushed', async () => {
++  const r = makeRepo({ githubSlug: 'o/r' });
++  const gh = await startFakeGitHub(state({ permissions: { push: false } }));
++  try {
++    const res = await runScript('github.mjs', ['access'], { cwd: r.work, env: { FACTORY_API_BASE: gh.base, GITHUB_TOKEN: 'test-token' } });
++    assert.equal(res.code, 4);
++    assert.match(res.stdout, /API push permission: false/);
++  } finally {
++    await gh.close();
++  }
++});
++
++function runWithStdin(args, cwd, input) {
++  return new Promise((resolve) => {
++    const child = spawn(process.execPath, [path.join(SCRIPTS, 'github.mjs'), ...args], { cwd, env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', FACTORY_NO_GH: '1' } });
++    let out = '';
++    child.stdout.on('data', (d) => (out += d));
++    child.stderr.on('data', (d) => (out += d));
++    child.on('close', (code) => resolve({ code, out }));
++    child.stdin.end(input);
++  });
++}
++
++test('draft saves into .git/factory-loop and only accepts draft names', async () => {
++  const r = makeRepo({ githubSlug: 'o/r' });
++  const ok = await runWithStdin(['draft', '--name', 'pr-ticket-6-x.md'], r.work, '## Ticket\n\nCloses #6\n');
++  assert.equal(ok.code, 0, ok.out);
++  assert.equal(fs.readFileSync(path.join(r.work, '.git', 'factory-loop', 'pr-ticket-6-x.md'), 'utf8'), '## Ticket\n\nCloses #6\n');
++  const bad = await runWithStdin(['draft', '--name', '../../.claude/settings.json'], r.work, '{}');
++  assert.equal(bad.code, 2);
++  assert.ok(!fs.existsSync(path.join(r.work, '.claude', 'settings.json')));
++});
 diff --git a/.claude/tests/github.test.mjs b/.claude/tests/github.test.mjs
 index b461982..8666a02 100644
 --- a/.claude/tests/github.test.mjs

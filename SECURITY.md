@@ -37,9 +37,12 @@ Each layer assumes the one before it failed.
 
 ## Apply the hardening patch (locked files, so it's yours to apply)
 
-`.claude/patches/security-tightening.patch` changes the locked guardrail files (13 files: guard,
+`.claude/patches/security-tightening.patch` changes the locked guardrail files (15 files: guard,
 secrets, the new tool-output hook, settings, fetch-tickets, github.mjs, CI, and their tests).
-It was built and tested in a throwaway clone: all 256 factory tests pass with it.
+It was built and tested in a throwaway clone: all 263 factory tests pass with it. It also adds
+`github.mjs access` (checks push access before the first push, so a read-only account is caught
+early) and `github.mjs draft` (saves PR/comment drafts, which Claude Code's Write tool can't write
+inside `.git/`); both came from the failure audit.
 
 ```sh
 git apply --check .claude/patches/security-tightening.patch   # dry run
