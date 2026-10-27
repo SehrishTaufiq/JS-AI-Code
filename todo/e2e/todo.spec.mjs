@@ -207,6 +207,99 @@ test.describe('#5 recurring tasks', () => {
   });
 });
 
+test.describe('#8 search and due filter', () => {
+  const search = (page) => page.getByLabel('Search', { exact: true });
+
+  test('search filters as you type; every word must be in the title or a tag', async ({ page }) => {
+    await open(page);
+    await add(page, 'Buy milk', { tags: 'urgent, home' });
+    await add(page, 'Write report', { tags: 'work' });
+    await add(page, 'Buy stamps', { tags: 'work' });
+
+    await search(page).pressSequentially('mi');
+    await expect(items(page)).toHaveCount(1);
+    await expect(item(page, 'Buy milk')).toHaveCount(1);
+    await search(page).fill('BUY');
+    await expect(items(page)).toHaveCount(2);
+    await search(page).fill('milk urgent');
+    await expect(items(page)).toHaveCount(1);
+    await search(page).fill('#work');
+    await expect(items(page)).toHaveCount(2);
+    await expect(count(page)).toHaveText('3 of 3 left · showing 2');
+    await search(page).fill('milk work');
+    await expect(items(page)).toHaveCount(0);
+    await expect(page.getByText('No tasks match these filters.')).toBeVisible();
+    // Markup typed into the search is just text to match, never rendered.
+    await search(page).fill('<img src=x onerror=alert(1)>');
+    await expect(items(page)).toHaveCount(0);
+  });
+
+  test('the clear button and Esc show everything again; a reload starts with no search', async ({ page }) => {
+    await open(page);
+    await add(page, 'Buy milk');
+    await add(page, 'Write report');
+    const clear = page.getByRole('button', { name: 'Clear search' });
+    await expect(clear).toBeHidden();
+
+    await search(page).fill('milk');
+    await expect(items(page)).toHaveCount(1);
+    await clear.click();
+    await expect(search(page)).toHaveValue('');
+    await expect(search(page)).toBeFocused();
+    await expect(clear).toBeHidden();
+    await expect(items(page)).toHaveCount(2);
+    await expect(count(page)).toHaveText('2 of 2 left');
+
+    await page.keyboard.type('report');
+    await expect(items(page)).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(search(page)).toHaveValue('');
+    await expect(items(page)).toHaveCount(2);
+
+    await search(page).fill('milk');
+    await page.reload();
+    await expect(search(page)).toHaveValue('');
+    await expect(items(page)).toHaveCount(2);
+  });
+
+  test('search combines with the status, tag and due filters @dates', async ({ page }) => {
+    await open(page);
+    const today = await browserToday(page);
+    await add(page, 'Buy milk', { tags: 'home', due: today });
+    await add(page, 'Buy bread', { tags: 'home', due: today });
+    await add(page, 'Buy stamps', { tags: 'work', due: today });
+    await add(page, 'Buy eggs', { tags: 'home' });
+    await add(page, 'Pay rent', { tags: 'home', due: addDays(today, -2) });
+    await item(page, 'Buy bread').getByRole('checkbox').check();
+
+    await search(page).fill('buy');
+    await expect(items(page)).toHaveCount(4);
+    await page.getByRole('radio', { name: 'Incomplete' }).check();
+    await expect(items(page)).toHaveCount(3);
+    await page.getByLabel('Tag', { exact: true }).selectOption('home');
+    await expect(items(page)).toHaveCount(2);
+    await page.getByLabel('Due', { exact: true }).selectOption('today');
+    await expect(items(page)).toHaveCount(1);
+    await expect(item(page, 'Buy milk')).toHaveCount(1);
+    await expect(count(page)).toHaveText('4 of 5 left · showing 1');
+
+    await page.getByLabel('Due', { exact: true }).selectOption('none');
+    await expect(items(page)).toHaveCount(1);
+    await expect(item(page, 'Buy eggs')).toHaveCount(1);
+
+    await search(page).fill('');
+    await page.getByLabel('Due', { exact: true }).selectOption('overdue');
+    await expect(items(page)).toHaveCount(1);
+    await expect(item(page, 'Pay rent')).toHaveCount(1);
+
+    // "Due today" includes finished tasks; "Overdue" never does.
+    await page.getByRole('radio', { name: 'All' }).check();
+    await page.getByLabel('Due', { exact: true }).selectOption('today');
+    await expect(items(page)).toHaveCount(2);
+    await expect(item(page, 'Buy bread')).toHaveCount(1);
+  });
+});
+
 test.describe('data and storage', () => {
   test('records saved by older versions still load', async ({ page }) => {
     await open(page);
@@ -302,7 +395,9 @@ test.describe('security and accessibility', () => {
   test('every control has an accessible name', async ({ page }) => {
     await open(page);
     await add(page, 'Labelled', { tags: 'a' });
-    for (const name of ['New task', 'Due date', 'Repeat', 'Tags']) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
+    for (const name of ['New task', 'Due date', 'Repeat', 'Tags', 'Search', 'Tag', 'Due']) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
+    await page.getByLabel('Search', { exact: true }).fill('lab');
+    await expect(page.getByRole('button', { name: 'Clear search' })).toBeVisible();
     await expect(page.getByRole('radio', { name: 'All' })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Labelled' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete "Labelled"' })).toBeVisible();
@@ -329,8 +424,10 @@ test.describe('security and accessibility', () => {
   test('phone width: no horizontal scrolling, adding still works @mobile', async ({ page }) => {
     await open(page);
     await add(page, 'A fairly long task title that needs to wrap on a narrow phone screen', { tags: 'one, two, three, four', due: '2026-10-30' });
+    await page.getByLabel('Search', { exact: true }).fill('a fairly long search to show the clear button');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+    await page.getByRole('button', { name: 'Clear search' }).click();
     await expect(items(page)).toHaveCount(1);
   });
 });

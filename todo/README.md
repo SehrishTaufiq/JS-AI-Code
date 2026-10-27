@@ -48,9 +48,14 @@ CI runs both suites on every PR.
   skips ahead to today or later. Monthly repeats keep their day of month: the 31st becomes
   Feb 28 or 29, then the 31st again in March. Unticking and re-ticking does not create a second
   copy. To stop a series, delete its open occurrence.
-- **Filters**: All / Incomplete / Completed, plus a tag dropdown listing every tag in
-  use. Filters combine. Clicking a tag chip on a task filters by that tag. If the
-  filtered tag disappears (its last task is deleted), the tag filter resets to all.
+- **Search**: filters the list as you type. Case-insensitive; every word must appear in the
+  title or in a tag (`milk urgent` finds "Buy milk" tagged `urgent`), partial words match and
+  a leading `#` is ignored. The × button or Esc clears it. It is not kept across reloads.
+- **Filters**: All / Incomplete / Completed, a tag dropdown listing every tag in use, and
+  Due: Any date / Overdue / Due today / No due date ("Overdue" means not done and past its
+  date; "Due today" includes done tasks). Search and all filters combine. Clicking a tag chip on
+  a task filters by that tag. If the filtered tag disappears (its last task is deleted), the tag
+  filter resets to all.
 - **Several tabs**: a change in one open tab shows up in the others (`BroadcastChannel`).
   If another tab upgrades the database, or storage is unavailable (e.g. private browsing),
   the page says so and disables editing, so changes are never silently lost.
@@ -69,7 +74,7 @@ CI runs both suites on every PR.
 |---|---|
 | `index.html` | Page markup and CSP; loads the three scripts in order |
 | `styles.css` | Styles, light and dark |
-| `tasks.js` | Pure task logic (create, tags, due dates, repeats, filter, sort). Shared with tests |
+| `tasks.js` | Pure task logic (create, tags, due dates, repeats, search, filter, sort). Shared with tests |
 | `db.js` | IndexedDB wrapper: database `todo-app`, store `tasks`, keyed by `id`; `putAll` for atomic multi-writes; reports lost connections |
 | `app.js` | UI wiring: events, rendering, focus restore, cross-tab sync, error display |
 | `tests/` | `node:test` unit tests for `tasks.js` |

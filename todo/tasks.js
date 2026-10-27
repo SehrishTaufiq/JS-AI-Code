@@ -3,6 +3,7 @@
 (function (root) {
   const STATUSES = ['all', 'incomplete', 'completed'];
   const REPEATS = ['daily', 'weekly', 'monthly'];
+  const DUE_FILTERS = ['overdue', 'today', 'none'];
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   function makeId() {
@@ -135,13 +136,39 @@
     return tasks.filter((t) => !t.done).length;
   }
 
-  // status: "all" | "incomplete" | "completed"; tag: "" for any tag.
-  function filterTasks(tasks, { status = 'all', tag = '' } = {}) {
+  // "  Buy #Work " -> ["buy", "work"]: lowercase words, a leading # dropped like in tags.
+  function parseSearch(text) {
+    return String(text || '')
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word) => word.replace(/^#+/, ''))
+      .filter(Boolean);
+  }
+
+  // Every word must appear somewhere in the title or in one of the tags.
+  function matchesSearch(task, words) {
+    const title = task.title.toLowerCase();
+    const tags = task.tags || [];
+    return words.every((word) => title.includes(word) || tags.some((tag) => tag.includes(word)));
+  }
+
+  // due: "overdue" | "today" | "none" | "" for any date; today is "YYYY-MM-DD".
+  function matchesDue(task, due, today) {
+    if (due === 'overdue') return isOverdue(task, today);
+    if (due === 'today') return task.dueDate === today;
+    if (due === 'none') return !task.dueDate;
+    return true;
+  }
+
+  // status: "all" | "incomplete" | "completed"; tag: "" for any tag; search: free text.
+  function filterTasks(tasks, { status = 'all', tag = '', due = '', search = '', today = toDateString() } = {}) {
+    const words = parseSearch(search);
     return tasks.filter((t) => {
       if (status === 'completed' && !t.done) return false;
       if (status === 'incomplete' && t.done) return false;
       if (tag && !(t.tags || []).includes(tag)) return false;
-      return true;
+      if (!matchesDue(t, due, today)) return false;
+      return matchesSearch(t, words);
     });
   }
 
@@ -163,7 +190,9 @@
   const api = {
     STATUSES,
     REPEATS,
+    DUE_FILTERS,
     parseTags,
+    parseSearch,
     parseDueDate,
     parseRepeat,
     createTask,
