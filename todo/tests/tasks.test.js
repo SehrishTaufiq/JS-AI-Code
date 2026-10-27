@@ -241,3 +241,52 @@ test('filterTasks with an unknown status behaves like all', () => {
   const tasks = [make('a', 1, 'a'), Tasks.toggleDone(make('b', 2, 'b'))];
   assert.equal(Tasks.filterTasks(tasks, { status: 'bogus' }).length, 2);
 });
+
+test('parseSearch lowercases, splits on whitespace and drops a leading #', () => {
+  assert.deepEqual(Tasks.parseSearch('  Buy   #Work\tURGENT '), ['buy', 'work', 'urgent']);
+  assert.deepEqual(Tasks.parseSearch('   '), []);
+  assert.deepEqual(Tasks.parseSearch('#'), []);
+  assert.deepEqual(Tasks.parseSearch(undefined), []);
+});
+
+test('search: every word must appear in the title or a tag, partial words match', () => {
+  const milk = make('Buy milk', 1, 'a', { tags: 'urgent, home' });
+  const report = make('Write report', 2, 'b', { tags: 'work' });
+  const search = (text) => Tasks.filterTasks([milk, report], { search: text }).map((t) => t.id);
+  assert.deepEqual(search('MILK'), ['a']);
+  assert.deepEqual(search('milk urgent'), ['a']);
+  assert.deepEqual(search('#wor'), ['b']);
+  assert.deepEqual(search('milk work'), []);
+  assert.deepEqual(search(''), ['a', 'b']);
+  assert.deepEqual(search('  '), ['a', 'b']);
+});
+
+test('due filter: overdue, due today, no due date; any date keeps everything', () => {
+  const today = '2026-10-26';
+  const late = make('late', 1, 'late', { dueDate: '2026-10-25' });
+  const lateDone = Tasks.toggleDone(make('late done', 2, 'lateDone', { dueDate: '2026-10-25' }));
+  const now = make('now', 3, 'now', { dueDate: today });
+  const nowDone = Tasks.toggleDone(make('now done', 4, 'nowDone', { dueDate: today }));
+  const later = make('later', 5, 'later', { dueDate: '2026-10-27' });
+  const none = make('none', 6, 'none');
+  const all = [late, lateDone, now, nowDone, later, none];
+  const due = (value) => Tasks.filterTasks(all, { due: value, today }).map((t) => t.id);
+  assert.deepEqual(due('overdue'), ['late']);
+  assert.deepEqual(due('today'), ['now', 'nowDone']);
+  assert.deepEqual(due('none'), ['none']);
+  assert.deepEqual(due(''), all.map((t) => t.id));
+  assert.deepEqual(due('bogus'), all.map((t) => t.id));
+  assert.deepEqual(Tasks.DUE_FILTERS, ['overdue', 'today', 'none']);
+});
+
+test('search, status, tag and due filters all combine', () => {
+  const today = '2026-10-26';
+  const tasks = [
+    make('Buy milk', 1, 'a', { tags: 'home', dueDate: today }),
+    Tasks.toggleDone(make('Buy bread', 2, 'b', { tags: 'home', dueDate: today })),
+    make('Buy stamps', 3, 'c', { tags: 'work', dueDate: today }),
+    make('Buy eggs', 4, 'd', { tags: 'home' }),
+  ];
+  const ids = Tasks.filterTasks(tasks, { search: 'buy', status: 'incomplete', tag: 'home', due: 'today', today }).map((t) => t.id);
+  assert.deepEqual(ids, ['a']);
+});

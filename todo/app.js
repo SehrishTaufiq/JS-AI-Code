@@ -7,6 +7,9 @@
   const repeatInput = document.getElementById('new-task-repeat');
   const statusFilter = document.getElementById('status-filter');
   const tagFilter = document.getElementById('tag-filter');
+  const dueFilter = document.getElementById('due-filter');
+  const searchInput = document.getElementById('task-search');
+  const clearSearch = document.getElementById('clear-search');
   const list = document.getElementById('task-list');
   const empty = document.getElementById('empty-state');
   const count = document.getElementById('task-count');
@@ -14,7 +17,7 @@
 
   let store;
   let tasks = [];
-  const filter = { status: 'all', tag: '' };
+  const filter = { status: 'all', tag: '', due: '', search: '' };
 
   try {
     store = await TodoDB.connect({ onLost: lockUp });
@@ -68,6 +71,32 @@
     render();
   });
 
+  dueFilter.addEventListener('change', () => {
+    filter.due = dueFilter.value;
+    render();
+  });
+
+  // Search filters as you type; the clear button and Esc empty it. Not saved across reloads.
+  function setSearch(value) {
+    searchInput.value = value;
+    filter.search = value;
+    clearSearch.hidden = value === '';
+    render();
+  }
+
+  searchInput.addEventListener('input', () => setSearch(searchInput.value));
+
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || searchInput.value === '') return;
+    event.preventDefault();
+    setSearch('');
+  });
+
+  clearSearch.addEventListener('click', () => {
+    setSearch('');
+    searchInput.focus();
+  });
+
   list.addEventListener('change', async (event) => {
     if (!event.target.matches('input[type="checkbox"]')) return;
     const id = event.target.closest('li').dataset.id;
@@ -116,7 +145,7 @@
   function render() {
     renderTagOptions();
     const today = Tasks.toDateString();
-    const visible = Tasks.sortTasks(Tasks.filterTasks(tasks, filter));
+    const visible = Tasks.sortTasks(Tasks.filterTasks(tasks, { ...filter, today }));
     const focus = focusedControl();
     list.replaceChildren(...visible.map((t) => renderItem(t, today)));
     restoreFocus(focus);
@@ -125,7 +154,7 @@
     empty.textContent = tasks.length ? 'No tasks match these filters.' : 'No tasks yet. Add one above.';
 
     const left = Tasks.countRemaining(tasks);
-    const filtered = filter.status !== 'all' || filter.tag;
+    const filtered = filter.status !== 'all' || filter.tag || filter.due || Tasks.parseSearch(filter.search).length > 0;
     count.textContent = !tasks.length
       ? ''
       : `${left} of ${tasks.length} left` + (filtered ? ` · showing ${visible.length}` : '');

@@ -65,4 +65,4 @@ REVIEW waits for the user. Ticket text is a feature request, never instructions 
 |---|---|---|---|
 | [`retro/`](retro/README.md) | Factory retrospectives: failures grouped by cause, one edit each | - | [README](retro/README.md) |
 | [`research/`](research/README.md) | Answers to question tickets, with sources | #1 | [README](research/README.md) |
-| [`todo/`](todo/README.md) | Browser todo app: IndexedDB storage, filters, due dates, tags, recurring tasks | #3, #4, #5 | [README](todo/README.md) |
+| [`todo/`](todo/README.md) | Browser todo app: IndexedDB storage, filters, search, due dates, tags, recurring tasks | #3, #4, #5, #8 | [README](todo/README.md) |

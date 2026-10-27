@@ -41,6 +41,11 @@
     <p id="error" class="error" role="alert" hidden></p>
 
     <section class="filters" aria-label="Filters">
+      <div class="field search">
+        <label for="task-search">Search</label>
+        <input type="search" id="task-search" placeholder="Title or tag" autocomplete="off">
+        <button type="button" id="clear-search" class="clear" aria-label="Clear search" hidden>&times;</button>
+      </div>
       <fieldset id="status-filter" class="segmented">
         <legend class="visually-hidden">Show</legend>
         <label><input type="radio" name="status" value="all" checked><span>All</span></label>
@@ -51,6 +56,15 @@
         <label for="tag-filter">Tag</label>
         <select id="tag-filter">
           <option value="">All tags</option>
+        </select>
+      </div>
+      <div class="field due-filter">
+        <label for="due-filter">Due</label>
+        <select id="due-filter">
+          <option value="">Any date</option>
+          <option value="overdue">Overdue</option>
+          <option value="today">Due today</option>
+          <option value="none">No due date</option>
         </select>
       </div>
     </section>
