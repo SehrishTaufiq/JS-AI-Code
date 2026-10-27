@@ -33,13 +33,16 @@ Each layer assumes the one before it failed.
 | A secret gets committed | Auto-commit leaves out files that look like secrets by name **or content** (GitHub/OpenAI/Anthropic/AWS/Slack tokens, JWTs, private keys, credentials in URLs; after the patch also Google, npm, Stripe live, Azure, GitLab, Hugging Face) | `.claude/hooks/auto-commit.mjs`, `secrets.mjs` |
 | A secret pasted in a prompt is published | The prompt log masks token-like strings before writing; it lives on the public `prompt-log` branch | `.claude/hooks/log-prompts.mjs` |
 | XSS in the todo app | User text rendered with `textContent` only; Content-Security-Policy blocks inline/injected scripts; e2e test checks both | `todo/index.html`, `todo/e2e/` |
-| Unsafe code or a bad dependency slips into a PR | `security-reviewer` reviews each PR; `security-guidance`, `claude-security` and `semgrep` plugins; CI runs all tests, `npm audit`, and screens the PR text. After the patch, actions are pinned to commit SHAs and checkout keeps no credentials | `.claude/agents/`, `.github/workflows/test.yml` |
+| Unsafe code or a bad dependency slips into a PR | `security-reviewer` reviews each PR; `security-guidance` plugin (after the patch also `claude-security` and `semgrep`); CI runs all tests, `npm audit`, and screens the PR text. After the patch, actions are pinned to commit SHAs and checkout keeps no credentials | `.claude/agents/`, `.github/workflows/test.yml` |
 
 ## Apply the hardening patch (locked files, so it's yours to apply)
 
-`.claude/patches/security-tightening.patch` changes the locked guardrail files (13 files: guard,
+`.claude/patches/security-tightening.patch` changes the locked guardrail files (15 files: guard,
 secrets, the new tool-output hook, settings, fetch-tickets, github.mjs, CI, and their tests).
-It was built and tested in a throwaway clone: all 256 factory tests pass with it.
+It was built and tested in a throwaway clone: all 263 factory tests pass with it. It also adds
+`github.mjs access` (checks push access before the first push, so a read-only account is caught
+early) and `github.mjs draft` (saves PR/comment drafts, which Claude Code's Write tool can't write
+inside `.git/`); both came from the failure audit.
 
 ```sh
 git apply --check .claude/patches/security-tightening.patch   # dry run

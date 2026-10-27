@@ -10,10 +10,10 @@ ticket asked for in a real browser, the way a user would, before calling it done
   the user's real browser profile, so test data would land in their own storage. If it is the
   only option, use a fresh tab and delete only the test records you created.
 - Open the page with `new_page` at `file:///<absolute path>/index.html` and an `isolatedContext`
-  name (e.g. `factory-qa`). That gives clean storage that does not touch the user's own browser
+  name (e.g. `qa-ticket-<N>`). That gives clean storage that does not touch the user's own browser
   profile, and the data survives reloads within that context, which you need for persistence checks.
-- Prefer `take_snapshot` (accessibility tree) over screenshots for checking state; take one
-  screenshot at the end to check the layout.
+- Check state with `take_snapshot` (accessibility tree), not screenshots. Screenshots are the
+  evidence set described below.
 
 ## Screenshots (attached to the PR and the ticket)
 
@@ -28,7 +28,7 @@ show a single checklist item in a state that makes the result obvious.
 - Use `fullPage: true` when the list is longer than the viewport.
 - Typical set: the starting state, each feature from the ticket in action, one edge case
   (no-match filter, validation), and the final state after a reload (to show it persisted).
-- Use a fresh `isolatedContext` per ticket (e.g. `ticket-<N>`) so the screenshots show only this
+- Use a fresh `isolatedContext` per ticket (e.g. `qa-ticket-<N>`) so the screenshots show only this
   ticket's test data.
 
 ## Checklist
