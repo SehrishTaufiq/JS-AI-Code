@@ -1,0 +1,371 @@
+[
+  {
+    "session": "01a2150a-901b-4f3d-b002-9999fa9be321",
+    "project": "d--bug-hunter",
+    "goal": "Understand what the Bug Hunter project is and learn how to actually start using it to scan the user's own app or URL",
+    "outcome": "partially_achieved",
+    "friction": {
+      "misunderstood_request": 2,
+      "wrong_approach": 1
+    },
+    "detail": "The user kept asking how to start using the tool on their own app, but Claude went deep into repo internals, debugging and fixes, and ran a scan on the bundled fixture. The user ended still saying 'I don't know how to start.'",
+    "summary": "The user, a novice, wanted to learn how to use Bug Hunter on their own app. Claude fixed several real repo bugs (including tests auto-committing to the repo) with the user's approval, but the user stayed confused about how to start until the final simplified explanation."
+  },
+  {
+    "session": "02a0b6ac-5a68-4b52-884e-798477677f44",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Configure Playwright banquet test projects so payment flow runs after workflow without being skipped on failure, investigate nightly failures, fix Allure report cleanup, and simplify the runner files.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "misunderstood_request": 2
+    },
+    "detail": "Claude explained Playwright's limitations and applied a dependency chain instead of making payment flow run after workflow without depending on it. The user had to restate the request ('you are not getting my point') before Claude built a two-stage runner.",
+    "summary": "The user wanted banquet payment flow to run after workflow without skip propagation, plus a nightly failure diagnosis, a report-cleanup fix, and runner consolidation. After an initial misunderstanding, Claude delivered all of these."
+  },
+  {
+    "session": "02fae904-9f5a-419e-b6ab-cc84010bd327",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Standardize test case naming across all Playwright spec files to the consistent 'JS-###: Synergy_<Module>_<Action>' structure used in Members, Banquet, and Inventory",
+    "outcome": "fully_achieved",
+    "friction": {
+      "buggy_code": 2,
+      "tool_issue": 1
+    },
+    "detail": "A shell command hung waiting for input, the first rename script missed every match because of CRLF line endings, and Claude overcounted Activity tests in its audit (22 instead of 21).",
+    "summary": "The user wanted the MFA and Tee Sheet test names, and then all remaining off-pattern tests, renamed to the standard Synergy naming structure, and Claude renamed 68 tests across specs and confirmed with a re-scan and Playwright listing."
+  },
+  {
+    "session": "04491366-3b07-435c-ae3c-b0f29b0fd7e8",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Produce polished Q3 2026 (Jul–Sep) reports of the user's AI usage and personal work contributions for management. The reports needed to highlight the Self-Heal implementation, new test case automation, coverage and architecture work, plus AI adoption and usage metrics, and be exported as PDFs.",
+    "outcome": "fully_achieved",
+    "friction": {
+      "misunderstood_request": 1
+    },
+    "detail": "Claude placed the AI usage tracker lower in the work report, and the user had to ask for it to be moved to the top because it is the most important part.",
+    "summary": "The user wanted Q3 AI-usage and personal-work reports built from git history, Claude logs and self-heal data, with Self-Heal, test coverage and AI adoption featured and exported to PDF. Claude delivered and refined these reports across several iterations."
+  },
+  {
+    "session": "050cf34a-f592-46ee-beb8-55cca6ec2820",
+    "project": "d--Synergy-Agent-Synergy-Web-Automation",
+    "goal": "Get an understanding of the Synergy Integration module by having Claude access the UAT environment and describe its context",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "user_rejected_action": 1,
+      "excessive_changes": 1
+    },
+    "detail": "After the MCP reconnect, Claude started re-logging into UAT to keep verifying a bug the user hadn't asked about, and the user said 'stop'.",
+    "summary": "User asked for context on the Synergy Integration module in UAT. Claude logged in, walked through all six tabs, found a live bug and summarized the module, but was stopped when it tried to continue browser actions on its own after a reconnect."
+  },
+  {
+    "session": "0a57df7e-c1c2-4271-92a4-dda6806946e8",
+    "project": "D--contour-jonas-oct-2026-qa-sehrish-lodhi",
+    "goal": "Set up evals (including browser console/network-log checks and hook-triggered eval runs) for the QA repo, and get all the branch code pushed to GitHub under the correct account (ultimately SehrishTaufiq/JS-AI-Code).",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "external_permission_issue": 3,
+      "blocked_file_write": 1
+    },
+    "detail": "Pushes kept failing with 403 because the account lacked repo access and later the token lacked workflow scope. Claude also couldn't write the hook into .claude/ and had to ask the user to copy it in, which prompted repeated 'do it yourself' requests.",
+    "summary": "The user wanted evals for browser and network logs, hook-triggered eval runs, and their code pushed to GitHub. Claude built and verified the console/network eval with mutation testing and staged the hook for the user to install. After switching accounts and adding the workflow permission, it pushed all branches to SehrishTaufiq/JS-AI-Code; the final request was still in progress."
+  },
+  {
+    "session": "0d87451a-2fd7-49a3-93c1-7b15d544505c",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Triage nightly Playwright test failures from the Allure report and reconfigure the banquet-paymentflow project so it runs after banquet-workflow without being skipped when its dependency fails.",
+    "outcome": "not_achieved",
+    "friction": {
+      "context_limit_exceeded": 4
+    },
+    "detail": "Every assistant reply in this continued session was 'Prompt is too long', so none of the user's requests were addressed, even after the user switched models.",
+    "summary": "The user wanted Claude to read the nightly Allure report and explain how to change a Playwright project dependency so tests run in order without being skipped, but every response failed with a context-length error and nothing was accomplished."
+  },
+  {
+    "session": "19ae2538-d068-4ab3-ad80-d7df5d3112bd",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Keep the Synergy Playwright automation suite in sync with TestLink, fix failing nightly tests (Members and Installment Billing), restrict self-heal Jira searches to Synergy team members, and repair the broken project environment",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "misunderstood_request": 2,
+      "wrong_approach": 1,
+      "buggy_code": 1
+    },
+    "detail": "Claude re-created TestLink cases the user had intentionally deleted, built a Jira report page when the user wanted the self-heal agent's Jira search scoped to the team, and initially ignored the user's earlier instruction to use distinct plan-free members for Installment Billing tests.",
+    "summary": "User wanted TestLink sync, nightly failure fixes, team-scoped Jira searches for self-heal, and environment repair; Claude delivered most of it with verified test runs, after several corrections for misread intent."
+  },
+  {
+    "session": "366f160a-cede-407a-80d9-975a39d5cc4e",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Automate all remaining manual TestLink cases in the Members suite (excluding Multi-Ledger), with header tabs in separate files, then understand the failures, fix a misinterpreted case, and produce defect reproduction steps",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "misunderstood_request": 1,
+      "buggy_code": 1
+    },
+    "detail": "JS-1800 was first built on a reading of the case that the user corrected and asked to rewrite, and during the rewrite a probe-file edit was applied twice by mistake, so the file had to be rewritten.",
+    "summary": "The user wanted the TestLink Members suite automated. Claude built tests for all 168 manual cases, and 128 now pass and are marked Automated. Claude then explained the 40 non-green cases in detail, rewrote JS-1800 to the user's flow (it passes and is now Automated), and wrote reproduction steps for the JS-1757 defect."
+  },
+  {
+    "session": "397c8c54-6163-401c-93fe-91ad230ee9c0",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Update the Agent-Automation branch with the latest main code without committing, then reapply the user's uncommitted changes from today on top of it",
+    "outcome": "fully_achieved",
+    "friction": {},
+    "detail": "",
+    "summary": "The user wanted to sync the branch with main without committing and then restore today's local changes. Claude fast-forwarded the branch to origin/main and reapplied the stashed edits with nothing committed or pushed."
+  },
+  {
+    "session": "4230fefc-e67e-4c75-a918-ad14cdc0ba4f",
+    "project": "d--Dev-Code",
+    "goal": "Turn a list of user-reported tenant config bugs into QA test cases with steps, export them to an Excel sheet, and later run and document service-charge test cases in the live app.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "environment_limitations": 1
+    },
+    "detail": "There was no Python or LibreOffice for building the Excel file, so Claude switched to exceljs. Some service-charge test cases were blocked by a missing club setting and an employee PIN gate.",
+    "summary": "The user wanted the tenant config bug list analyzed, turned into test cases with steps, and exported to Excel, and Claude delivered each piece. In a later part it ran service-charge tests in the browser and wrote up the results, with two cases blocked."
+  },
+  {
+    "session": "469217f5-1322-4279-af69-fe9e2d842fea",
+    "project": "d--Dev-Code",
+    "goal": "Build, refine, and live-execute a comprehensive QA test case workbook for the Lockers module (setup CRUD, board assignments, waitlist, billing proration across frequencies) against Synergy UAT, while understanding how locker billing is calculated.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 2,
+      "wrong_approach": 1,
+      "misunderstood_request": 1
+    },
+    "detail": "Claude's curated rebuild dropped the CRUD coverage the user expected. Its first billing explanation guessed at the cause before reading the screenshots. Minor script bugs also occurred, including an invalid sheet name and escaping in an inline -e string.",
+    "summary": "The user wanted a consolidated Lockers module test suite built from their billing formulas, with the billing logic explained along the way. Claude delivered a 90-case workbook, reverse-engineered the annual-rate billing behavior, and executed all cases live against UAT, logging pass/fail results and defects."
+  },
+  {
+    "session": "47fa0450-359a-4a04-94cf-930c757ee6bb",
+    "project": "C--Windows-system32",
+    "goal": "Set up a recurring hello-world loop, then fetch GitHub issues from a specific repository and respond to the ticket with an emoji reaction and an answer comment.",
+    "outcome": "partially_achieved",
+    "friction": {
+      "external_auth_blocker": 2,
+      "enterprise_permission_block": 1,
+      "wrong_approach": 1
+    },
+    "detail": "GitHub CLI login stalled on a passkey prompt the user couldn't get past. Claude first guessed the wrong repository when the user didn't name one. Once logged in, the Enterprise Managed User account was blocked (403) from posting the comment and reaction.",
+    "summary": "The hello-world loop was scheduled and stopped, and the target repo's issue was fetched and an answer drafted. Adding the emoji reaction and posting the comment failed because GitHub blocks write actions from the Enterprise Managed User account."
+  },
+  {
+    "session": "4823c944-ace9-4b89-86f0-d92278423db9",
+    "project": "d--Dev-Code",
+    "goal": "Get a scan-only report of verified bugs and defects in the POS module, covering issues within individual areas and across area boundaries, with no code modifications",
+    "outcome": "not_achieved",
+    "friction": {
+      "session_limit_reached": 1,
+      "excessive_scope_overhead": 1
+    },
+    "detail": "Claude spent the session on extensive recon and dispatched about 24 parallel Hunter agents, then hit the session usage limit before any defect report was delivered.",
+    "summary": "The user wanted a read-only bug scan of the POS module, but the session ran out of usage during the multi-wave agent scan and no findings were delivered."
+  },
+  {
+    "session": "486155ea-baee-44e3-9f78-bdea09742659",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Maintain the Synergy Playwright test automation: fix nightly Chromium install failures, upgrade Playwright, diagnose a failing test, clean up QA test data on UAT via API, and get a weekly commit status summary",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 3,
+      "wrong_approach": 1
+    },
+    "detail": "The first nightly Chromium fix only ran through npm run test-nightly, so the user reported the same failure twice. The globalSetup version first had an unexported cli.js require path and then an existsSync gate that missed the headless shell binary.",
+    "summary": "User wanted the nightly Chromium install failure fixed, Playwright upgraded, JS-516 diagnosed, QA test data deleted and a weekly status summary. Claude delivered most of this after several iterations on the Chromium fix, but couldn't delete departments because no delete endpoint exists."
+  },
+  {
+    "session": "4ca8c49b-13e8-413c-85c4-897b60fdbb8b",
+    "project": "d--Dev-Code",
+    "goal": "Find the root cause of a client-reported bug: changing a class's tax group to include sales tax shows 'update success' but the change doesn't persist. Then get repro steps to verify it.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "overstated_findings": 1
+    },
+    "detail": "Claude first called a standalone browser simulation a 'reproduction' of the bug, then corrected that it never tested the real UAT screen (expired session, no credentials).",
+    "summary": "The user wanted every possible cause of a class sales-tax save bug investigated. Claude traced the frontend and backend save/read paths, identified a likely Tax Group dropdown binding bug, and gave repro steps, but couldn't verify on live UAT."
+  },
+  {
+    "session": "53b4292b-e24a-4970-91fd-6a6a2d9c3d95",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Convert the existing self-heal skill into a Claude Code custom agent definition (with failure-analysis behavior) that has access to the needed MCP servers",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "misunderstood_request": 1,
+      "tool_failure": 1
+    },
+    "detail": "Claude first treated the pasted agent prompt as a request to run failure analysis instead of to create an agent, so the user had to clarify. A shell heredoc write also failed on quoting, and the new agent could not be live-tested in the same session.",
+    "summary": "User wanted their self-heal skill converted into a custom agent. After an initial misunderstanding, Claude designed and wrote the agent file and added mcpServers to its frontmatter, but live dispatch could not be verified until a new session."
+  },
+  {
+    "session": "54edf3b3-fe0d-41a7-9aeb-4798f66d1e03",
+    "project": "d--golfler-asp-2",
+    "goal": "Find out why closed-out chits reappear in the general chit pool days later, often on several terminals, and get the bug resolved.",
+    "outcome": "partially_achieved",
+    "friction": {},
+    "detail": "",
+    "summary": "The user reported closed chits reopening in the pool. Claude traced the backend and frontend code and found likely causes: the unbound ordersClosed event, split primaries that never finalize, and ReOpen2 accepting completed orders. It could not reproduce the issue against the out-of-date local DB and made no fix in the transcript."
+  },
+  {
+    "session": "557173e9-40b4-47dd-833e-2844391b5fb8",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Set up Claude Code automations for the Synergy-Web-Automation repo: get recommendations, then implement a chosen subset (commit/push confirmation hook, Playwright MCP pin, test-run lock, session-start check).",
+    "outcome": "fully_achieved",
+    "friction": {
+      "buggy_code": 1
+    },
+    "detail": "A scripted edit failed on the file's CRLF line endings, so Claude switched to the Edit tool; nothing was written by the failed attempt.",
+    "summary": "The user picked items 1, 3, 5 and 6 from Claude's automation recommendations, and Claude implemented all four: hooks, the MCP version pin, a run lock with 10 new tests, plus README and memory updates. All 182 tests pass."
+  },
+  {
+    "session": "59ea6d07-7031-412f-853c-76cd6bdc3808",
+    "project": "d--Dev-Code",
+    "goal": "Build and expand a QA test case workbook for the Installment Billing feature (create/cancel/reverse/settings/Run Now, deferred revenue/tax configs, APR overrides, Plans tab, Revenue Projection), executed against UAT with fresh members, after documenting the IT flow in the PRD",
+    "outcome": "fully_achieved",
+    "friction": {
+      "buggy_code": 2,
+      "environment_issue": 2
+    },
+    "detail": "Claude hit a stale UAT session and cold-start redirect, left a stray placeholder rec() call in a test script, and had to fix a script bug after one run. The original workbook was locked open in Excel, so the update was saved as a v2 file.",
+    "summary": "The user asked for focused Installment Billing test cases, then twice asked for more. Claude ran automated UAT tests on fresh members and delivered a 20-row workbook with all cases passing."
+  },
+  {
+    "session": "6afc5bcf-9929-4e62-8b7b-048bd7acae7a",
+    "project": "D--contour-jonas-oct-2026-qa-sehrish-lodhi",
+    "goal": "Run an automated 'factory' workflow that fetches GitHub issues from the user's repo, answers and acts on them (comment, react, build features, close), commits and pushes the work, and capture this as a reusable factory-loop skill.",
+    "outcome": "partially_achieved",
+    "friction": {
+      "external_permission_block": 6,
+      "auth_environment_issue": 3
+    },
+    "detail": "The gh CLI was logged in only as an Enterprise Managed User account with READ access, so every comment, reaction, close and push failed with a 403. Repeated re-login attempts, including incognito, kept connecting the same work account.",
+    "summary": "The user wanted GitHub tickets answered and built with the work pushed. Claude built the todo app tickets, a CLAUDE.md, a factory-loop skill and a Stop hook locally, verified the app in the browser, and diagnosed the account problem clearly, but nothing reached GitHub because the account only had READ access."
+  },
+  {
+    "session": "6d0b284f-e764-4841-b2c6-7ee2733e6231",
+    "project": "D--contour-jonas-oct-2026-qa-sehrish-lodhi",
+    "goal": "Harden and evaluate an AI-driven ticket-to-code factory: learn how to evaluate it, run the evals, push the code, add security tightening against malicious tickets, and check the latest tickets safely",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "environment_issues": 4,
+      "tool_errors": 2,
+      "buggy_code": 2
+    },
+    "detail": "GitHub pushes kept failing with a 403 permission error, the Claude CLI hit a spawn error, Python was missing, and CRLF line endings plus escaping bugs broke patch-building scripts. The guard also falsely flagged a read-only grep, and a scenario run moved the real branch, which needed fixing.",
+    "summary": "The user wanted to build and run AI evals, harden the factory against malicious tickets, and check new tickets. Claude implemented and ran the evals, built security patches and a ticket screen, and detected an injection in ticket #7, but pushing to GitHub stayed blocked by a 403."
+  },
+  {
+    "session": "899e5925-15e7-4a25-ac11-5166664a07ea",
+    "project": "c--Users-taufiseh-Downloads-publishable-skills",
+    "goal": "Learn what the publishable support-article skills do, install them, and use them to produce a validated support article (plus PDF) documenting how to create a dining reservation in the Jonas Synergy UAT app",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "environment_issue": 3,
+      "misunderstood_request": 1
+    },
+    "detail": "A stale Chrome process blocked browser automation, the target reader had to be corrected from club member to staff once the UI showed a staff-only app, sandboxed write paths forced workarounds, and the validator subagent couldn't attach to the browser, so validation never ran.",
+    "summary": "User wanted to understand and use the support-article skills to document a dining reservation workflow. Claude installed the skills, walked the live app, wrote a verified article with screenshots and a PDF to D:\\, but the validation step was blocked by the environment."
+  },
+  {
+    "session": "a0ff4335-068e-4be4-b0cf-3a328e62ad8e",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Continue building Playwright automation for Synergy web app TestLink cases (Minimum Spend Rule), refactor helper files, self-heal a failing test, get weekly automation stats, check git sync status, and update skill references with new learnings",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "wrong_approach": 1,
+      "misunderstood_request": 1
+    },
+    "detail": "During the JS-862 self-heal, Claude first classified the failure as an app bug and stopped. The user pushed back that it was a locator-picking problem, which led Claude to find a real Department-panel close timing bug, though the Frequency defect conclusion still held.",
+    "summary": "User had Claude automate the 3 Minimum Spend Rule cases, consolidate a helper file, self-heal JS-862, report weekly counts, check git sync and update skills. All were delivered, though the self-heal needed user correction before Claude found the real locator timing bug."
+  },
+  {
+    "session": "a420a0cc-2deb-4d3a-b1ad-5613e8d26ed6",
+    "project": "d--Dev-Code",
+    "goal": "Audit Members module test coverage against TestLink and the automation suite, generate missing test cases, push them into TestLink, and get an overall application automation coverage figure",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "wrong_approach": 1,
+      "misunderstood_request": 2
+    },
+    "detail": "Claude first audited a checkout that was 268 commits behind main, so its coverage numbers were wrong and the user had to correct them. Later Claude answered the coverage question by counting Members test cases when the user meant application-wide, product-level coverage, which took two more user corrections.",
+    "summary": "The user wanted a Members coverage audit, generated test cases pushed into TestLink, and an overall app coverage figure. Claude delivered 172 cases uploaded with zero failures plus case-level and module-level coverage numbers, after corrections for stale data and for misreading what kind of coverage the user meant."
+  },
+  {
+    "session": "a9d5d24b-4af6-4976-8cde-45e2384f8949",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Fix failing nightly Synergy Playwright tests (test-data self-seeding and Online Events review) with the self-heal agent workflow, then get the fixes onto a clean branch from main ready to commit and push.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 3,
+      "user_rejected_action": 1
+    },
+    "detail": "A combined rebase+stash pop command was refused. Claude also made several self-inflicted mistakes: a strict-mode helper broke seeding, a word replacement altered its own comment, and a whitespace-mismatched edit led to a wasted rerun.",
+    "summary": "The user wanted nightly test failures fixed (API self-seeding for Tax/Members tests and an Online Events review) and the fixes moved to a clean branch. Claude got the four seeded tests passing and Online Events to 13/14 green, with JS-454 awaiting the user's decision, then handled the git recovery, pull, revert and new-branch tasks cleanly."
+  },
+  {
+    "session": "aacda73d-f1d9-40dd-ae47-f4325c17da9f",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Improve the Claude Code setup for a Playwright test automation repo by discovering and adding plugins, hooks, sub-agents, MCP servers, and skills",
+    "outcome": "unclear_from_transcript",
+    "friction": {
+      "misunderstood_request": 1
+    },
+    "detail": "The initial 'claude code setup' request was too vague, so Claude had to ask a clarifying question before it could act.",
+    "summary": "The user wanted to extend the repo's Claude Code setup. Claude explained how to install plugins and ran the automation recommender, but the transcript ends just as Claude starts adding the six requested items, so the outcome is unclear."
+  },
+  {
+    "session": "d76eda05-1195-44ae-a182-ba41d1306194",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Get the Playwright nightly test suite to actually run all test cases instead of skipping them, fix or self-heal failing/skipped cases, and produce a list of cases needing human review or TestLink corrections",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 2
+    },
+    "detail": "In JS-926, Claude's Escape keypress closed the whole popup and its first version assumed independent dropdowns, which caused timeouts. Both needed follow-up fixes.",
+    "summary": "The user wanted skipped and failing nightly tests to run and be fixed. Claude fixed a serial-mode skip cascade across 11 files, implemented and corrected JS-926, fixed a false-green unawaited assertion, and delivered a categorized list of cases needing human review; credential-blocked cases remained unresolved."
+  },
+  {
+    "session": "dd61f5d1-8f11-4dc2-8dcb-a2dee166a979",
+    "project": "d--Dev-Code",
+    "goal": "Understand how the FirstPay and CardConnect payment processor integrations differ in the golfler_asp_2 codebase, and which one takes priority when processing transactions",
+    "outcome": "mostly_achieved",
+    "friction": {},
+    "detail": "",
+    "summary": "The user asked how FirstPay and CardConnect differ and which takes priority for transactions; Claude explained both integrations and found the explicit priority order in CommonFunctions.cs (CardConnect checked first)."
+  },
+  {
+    "session": "dee6937d-7868-484a-902c-86579f248d04",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Keep the Synergy web automation suite (nightly run) healthy by fixing test failures and skipped cases, investigating Tee Sheet booking-slot failures, and adding a new TestLink-tracked automated test for Tee Sheet interval settings",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 1
+    },
+    "detail": "Claude's first draft used a forbidden .then() chain and may have double-escaped characters in the TestLink case. It caught and corrected both itself, without user complaint.",
+    "summary": "The user wanted the nightly automation run fixed, failures investigated and a new Tee Sheet interval test written. The run fixes were committed and the TestLink case JS-1702 was created, with the automation code still in progress when the transcript ends."
+  },
+  {
+    "session": "e1208054-b4b2-4aff-a3c9-db412fef5a71",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Rewrite the Banquet Manager Playwright test suite cleanly so it runs in parallel and passes, then refactor page object instantiation into the test base fixture and fix a resulting spec file issue",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "buggy_code": 1
+    },
+    "detail": "Claude added a duplicate nParseCurrency helper to Common that the user had already added, which caused an issue in the workflow spec that then had to be fixed.",
+    "summary": "User asked for a clean, parallel rewrite of the Banquet Manager tests, a fixture-based page object refactor, and a spec fix; Claude got the suite green (with expected failures), did the refactor, and resolved a duplicate-helper issue."
+  },
+  {
+    "session": "e9179d39-dcb9-4e63-a6a9-49d24a966d2b",
+    "project": "d--Synergy-Synergy-Automation-Synergy-Web-Automation",
+    "goal": "Manage QA automation work for the Synergy web app: move files between git branches, clean up test inventory data via API, import spreadsheet test cases into TestLink, and automate the Installment Billing test cases with Playwright.",
+    "outcome": "mostly_achieved",
+    "friction": {
+      "misunderstood_request": 2,
+      "wrong_approach": 1
+    },
+    "detail": "Claude created a separate worktree folder to move files to main when the user only wanted the files moved for a manual commit, and JS-1741 had to be re-scoped to a single member and order after the user corrected it.",
+    "summary": "The user asked for a git file move, cleanup of QA inventory items, two TestLink imports and automation of 19 Installment Billing cases. Nearly all of it was delivered and verified with passing runs, with one early misunderstanding of the git request and one test that needed re-scoping."
+  }
+]
